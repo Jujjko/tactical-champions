@@ -264,14 +264,13 @@ class AuthController extends Controller {
             return;
         }
         
+        // --- ISPRAVLJENI DIO ---
         $userId = $this->userModel->createUser(
             htmlspecialchars($_POST['username']),
             htmlspecialchars($_POST['email']),
             $_POST['password']
         );
-            htmlspecialchars($_POST['email']),
-            $_POST['password']
-        );
+        // -----------------------
         
         $this->rateLimiter->clear($ipKey);
         

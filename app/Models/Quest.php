@@ -9,15 +9,33 @@ class Quest extends Model {
     protected string $table = 'quests';
     
     public function getDailyQuests(): array {
-        return $this->where('type', 'daily', 'AND is_active = TRUE ORDER BY sort_order');
+        $stmt = $this->db->prepare("
+            SELECT * FROM {$this->table} 
+            WHERE type = ? AND is_active = TRUE 
+            ORDER BY sort_order
+        ");
+        $stmt->execute(['daily']);
+        return $stmt->fetchAll();
     }
     
     public function getWeeklyQuests(): array {
-        return $this->where('type', 'weekly', 'AND is_active = TRUE ORDER BY sort_order');
+        $stmt = $this->db->prepare("
+            SELECT * FROM {$this->table} 
+            WHERE type = ? AND is_active = TRUE 
+            ORDER BY sort_order
+        ");
+        $stmt->execute(['weekly']);
+        return $stmt->fetchAll();
     }
     
     public function getActiveQuests(): array {
-        return $this->where('is_active', true, 'ORDER BY type, sort_order');
+        $stmt = $this->db->prepare("
+            SELECT * FROM {$this->table} 
+            WHERE is_active = TRUE 
+            ORDER BY type, sort_order
+        ");
+        $stmt->execute([]);
+        return $stmt->fetchAll();
     }
     
     public function getByType(string $type): array {

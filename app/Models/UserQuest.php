@@ -59,8 +59,8 @@ class UserQuest extends Model {
                     'user_id' => $userId,
                     'quest_id' => $quest['id'],
                     'progress' => 0,
-                    'completed' => false,
-                    'claimed' => false
+                    'completed' => 0,
+                    'claimed' => 0
                 ]);
             }
         }
