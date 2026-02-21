@@ -94,14 +94,8 @@ class TutorialController extends Controller
         
         $reward = self::TUTORIAL_STEPS[$step]['reward_gold'] ?? 0;
         if ($reward > 0) {
-            $userModel = new \App\Models\User();
-            $user = $userModel->findById($userId);
-            
             $resourceModel = new \App\Models\Resource();
-            $resource = $resourceModel->getByUserId($userId);
-            $resourceModel->update($resource['id'], [
-                'gold' => $resource['gold'] + $reward,
-            ]);
+            $resourceModel->addGold($userId, $reward);
         }
         
         $nextStep = $tutorialModel->getNextStep($userId);

@@ -3,6 +3,10 @@
 let currentBattleState = null;
 let selectedAttacker = null;
 let selectedTarget = null;
+let battleInterval = null;
+let battleEnded = false;
+let autoBattleEnabled = false;
+let autoBattleInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initBattle();
@@ -14,14 +18,35 @@ async function initBattle() {
 }
 
 async function fetchBattleState() {
+    if (battleEnded) return;
+    
     try {
         const res = await fetch('/battle/state');
-        currentBattleState = await res.json();
+        const data = await res.json();
+        
+        if (!res.ok || data.error) {
+            console.error('Battle state error:', data.error || 'Unknown error');
+            if (battleInterval) clearInterval(battleInterval);
+            window.location.href = '/missions';
+            return;
+        }
+        
+        currentBattleState = data.battle_state || data;
+        
+        if (!currentBattleState || !currentBattleState.player_team) {
+            console.error('Invalid battle state');
+            if (battleInterval) clearInterval(battleInterval);
+            window.location.href = '/missions';
+            return;
+        }
+        
         renderTeams();
         updateTurnCounter();
         updateBattleLog(currentBattleState.battle_log || []);
     } catch (e) {
         console.error(e);
+        if (battleInterval) clearInterval(battleInterval);
+        window.location.href = '/missions';
     }
 }
 
@@ -29,6 +54,11 @@ function setupEventListeners() {
     document.getElementById('forfeit-btn').addEventListener('click', forfeitBattle);
     document.getElementById('attack-btn').addEventListener('click', () => executePlayerAction(false));
     document.getElementById('ability-btn').addEventListener('click', () => executePlayerAction(true));
+    
+    const autoBattleBtn = document.getElementById('auto-battle-btn');
+    if (autoBattleBtn) {
+        autoBattleBtn.addEventListener('click', toggleAutoBattle);
+    }
 }
 
 function renderTeams() {
@@ -89,11 +119,14 @@ async function executePlayerAction(useAbility) {
         return;
     }
 
+    const csrfToken = document.getElementById('csrf-token')?.value || '';
+    
     const formData = new URLSearchParams({
         action: 'attack',
         attacker_id: selectedAttacker,
         target_id: selectedTarget,
-        use_ability: useAbility ? 'true' : 'false'
+        use_ability: useAbility ? 'true' : 'false',
+        csrf_token: csrfToken
     });
 
     try {
@@ -115,6 +148,8 @@ async function executePlayerAction(useAbility) {
         updateBattleLog(result.battle_log || []);
 
         if (result.battle_ended) {
+            battleEnded = true;
+            if (battleInterval) clearInterval(battleInterval);
             setTimeout(() => showBattleResult(result), 800);
         }
 
@@ -247,9 +282,30 @@ function updateBattleLog(log) {
 }
 
 function showBattleResult(result) {
+    stopAutoBattle();
+    battleEnded = true;
+    if (battleInterval) clearInterval(battleInterval);
+    
     const modal = document.getElementById('result-modal');
     const content = document.getElementById('result-content');
     const isVictory = result.winner === 'victory';
+    const rewards = result.rewards || {};
+    const mission = result.mission || {};
+
+    let rewardsHtml = '';
+    if (isVictory && rewards) {
+        rewardsHtml = `
+            <div class="glass rounded-2xl p-6 mt-6 mb-6">
+                <h3 class="text-xl font-semibold mb-4 text-yellow-400">Rewards Earned</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    ${rewards.gold ? `<div class="bg-yellow-500/20 rounded-xl p-4"><div class="text-3xl">💰</div><div class="text-2xl font-bold text-yellow-400">+${rewards.gold}</div><div class="text-sm text-white/60">Gold</div></div>` : ''}
+                    ${rewards.experience ? `<div class="bg-indigo-500/20 rounded-xl p-4"><div class="text-3xl">✨</div><div class="text-2xl font-bold text-indigo-400">+${rewards.experience}</div><div class="text-sm text-white/60">Experience</div></div>` : ''}
+                    ${rewards.lootbox ? `<div class="bg-purple-500/20 rounded-xl p-4"><div class="text-3xl">📦</div><div class="text-2xl font-bold text-purple-400">+1</div><div class="text-sm text-white/60">${rewards.lootbox} Lootbox</div></div>` : ''}
+                </div>
+                ${mission.name ? `<div class="mt-4 text-white/60 text-sm">Mission: ${mission.name}</div>` : ''}
+            </div>
+        `;
+    }
 
     content.innerHTML = `
         <div class="text-center">
@@ -257,8 +313,9 @@ function showBattleResult(result) {
             <h2 class="text-6xl font-bold title-font mb-4 ${isVictory ? 'text-emerald-400' : 'text-red-500'}">
                 ${isVictory ? 'VICTORY' : 'DEFEAT'}
             </h2>
+            ${rewardsHtml}
             <button onclick="location.href='/missions'" 
-                    class="mt-8 px-12 py-6 bg-white/10 hover:bg-white/20 rounded-3xl text-xl font-semibold transition">
+                    class="mt-6 px-12 py-6 bg-white/10 hover:bg-white/20 rounded-3xl text-xl font-semibold transition">
                 Return to Base
             </button>
         </div>
@@ -269,8 +326,10 @@ function showBattleResult(result) {
 
 async function forfeitBattle() {
     if (confirm('Forfeit the battle?')) {
+        stopAutoBattle();
+        const csrfToken = document.getElementById('csrf-token')?.value || '';
         const formData = new URLSearchParams();
-        formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+        formData.append('csrf_token', csrfToken);
         
         await fetch('/battle/forfeit', { 
             method: 'POST',
@@ -281,8 +340,64 @@ async function forfeitBattle() {
     }
 }
 
-setInterval(() => {
-    if (currentBattleState && document.getElementById('result-modal').classList.contains('hidden')) {
+function toggleAutoBattle() {
+    const btn = document.getElementById('auto-battle-btn');
+    
+    if (autoBattleEnabled) {
+        stopAutoBattle();
+        btn.textContent = '⚡ Auto Battle';
+        btn.classList.remove('bg-yellow-500/80', 'hover:bg-yellow-600');
+        btn.classList.add('bg-purple-500/80', 'hover:bg-purple-600');
+    } else {
+        autoBattleEnabled = true;
+        btn.textContent = '⏹ Stop Auto';
+        btn.classList.remove('bg-purple-500/80', 'hover:bg-purple-600');
+        btn.classList.add('bg-yellow-500/80', 'hover:bg-yellow-600');
+        runAutoBattle();
+    }
+}
+
+function stopAutoBattle() {
+    autoBattleEnabled = false;
+    if (autoBattleInterval) {
+        clearTimeout(autoBattleInterval);
+        autoBattleInterval = null;
+    }
+}
+
+async function runAutoBattle() {
+    if (!autoBattleEnabled || battleEnded) {
+        stopAutoBattle();
+        return;
+    }
+    
+    const playerTeam = currentBattleState?.player_team || [];
+    const enemyTeam = currentBattleState?.enemy_team || [];
+    
+    const alivePlayers = playerTeam.filter(c => c.alive);
+    const aliveEnemies = enemyTeam.filter(c => c.alive);
+    
+    if (alivePlayers.length === 0 || aliveEnemies.length === 0 || battleEnded) {
+        stopAutoBattle();
+        return;
+    }
+    
+    const attacker = alivePlayers[0];
+    const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+    
+    if (attacker && target) {
+        selectedAttacker = attacker.id;
+        selectedTarget = target.id;
+        await executePlayerAction(false);
+    }
+    
+    if (autoBattleEnabled && !battleEnded) {
+        autoBattleInterval = setTimeout(runAutoBattle, 800);
+    }
+}
+
+battleInterval = setInterval(() => {
+    if (currentBattleState && document.getElementById('result-modal').classList.contains('hidden') && !battleEnded) {
         fetchBattleState();
     }
 }, 1800);

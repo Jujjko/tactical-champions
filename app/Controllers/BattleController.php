@@ -15,7 +15,7 @@ class BattleController extends Controller {
     }
     
     public function prepare(string $id): void {
-        if (Session::isLoggedIn()) {
+        if (!Session::isLoggedIn()) {
             $this->redirect('/dashboard');
             return;
         }
@@ -93,7 +93,7 @@ class BattleController extends Controller {
             return;
         }
         
-        $this->json($battleState['battle_state']);
+        $this->json($battleState['battle_state'] ?? $battleState);
     }
     
     public function forfeit(): void {

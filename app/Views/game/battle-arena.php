@@ -1,5 +1,6 @@
 <?php ob_start(); ?>
-<div class="min-h-screen bg-[#0a0818] py-8">
+<input type="hidden" id="csrf-token" value="<?= \Core\Session::csrfToken() ?>">
+<div class="min-h-screen bg-[#0a0818] py-8 pt-28">
     <div class="max-w-7xl mx-auto px-6">
 
         <!-- Battle Header -->
@@ -11,10 +12,18 @@
                     <div class="text-white/60 text-sm">Epic Battle Arena</div>
                 </div>
             </div>
-            <button id="forfeit-btn" 
-                    class="px-8 py-4 bg-red-500/80 hover:bg-red-600 rounded-3xl font-semibold transition flex items-center gap-3">
-                <i data-lucide="flag" class="w-5 h-5"></i> Forfeit
-            </button>
+            <div class="flex gap-3">
+                <?php if (\Core\Session::isAdmin()): ?>
+                <button id="auto-battle-btn" 
+                        class="px-6 py-4 bg-purple-500/80 hover:bg-purple-600 rounded-3xl font-semibold transition flex items-center gap-2">
+                    ⚡ Auto Battle
+                </button>
+                <?php endif; ?>
+                <button id="forfeit-btn" 
+                        class="px-8 py-4 bg-red-500/80 hover:bg-red-600 rounded-3xl font-semibold transition flex items-center gap-3">
+                    <i data-lucide="flag" class="w-5 h-5"></i> Forfeit
+                </button>
+            </div>
         </div>
 
         <div class="grid grid-cols-12 gap-8">

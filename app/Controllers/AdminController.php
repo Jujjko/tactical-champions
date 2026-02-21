@@ -672,4 +672,151 @@ class AdminController extends Controller {
         
         $this->jsonSuccess(['season_id' => $seasonId, 'message' => 'Season started successfully']);
     }
+    
+    public function tournaments(): void {
+        $tournamentModel = new \App\Models\Tournament();
+        $tournaments = $tournamentModel->db->query("
+            SELECT t.*, 
+                   (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) as participant_count
+            FROM tournaments t
+            ORDER BY t.created_at DESC
+        ")->fetchAll();
+        
+        $this->view('admin/tournaments', [
+            'tournaments' => $tournaments,
+        ]);
+    }
+    
+    public function createTournament(): void {
+        if (!Session::isAdmin()) {
+            $this->redirect('/admin');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $this->view('admin/tournament-form', [
+                'csrf_token' => Session::csrfToken(),
+            ]);
+            return;
+        }
+        
+        if (!$this->validateCsrf()) {
+            $this->redirectWithError('/admin/tournaments', 'Invalid request');
+        }
+        
+        $name = trim($_POST['name'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $maxPlayers = (int)($_POST['max_players'] ?? 8);
+        $entryFeeGold = (int)($_POST['entry_fee_gold'] ?? 0);
+        $entryFeeGems = (int)($_POST['entry_fee_gems'] ?? 0);
+        $minRating = (int)($_POST['min_rating'] ?? 0);
+        $startTime = $_POST['start_time'] ?? null;
+        
+        if (empty($name)) {
+            $this->redirectWithError('/admin/tournaments', 'Name is required');
+        }
+        
+        $tournamentService = new \App\Services\TournamentService();
+        $tournamentId = $tournamentService->createTournament([
+            'name' => $name,
+            'description' => $description,
+            'max_players' => $maxPlayers,
+            'entry_fee_gold' => $entryFeeGold,
+            'entry_fee_gems' => $entryFeeGems,
+            'min_rating' => $minRating,
+            'start_time' => $startTime,
+        ], Session::userId());
+        
+        $this->auditService->log('create_tournament', 'tournaments', $tournamentId, $_POST);
+        
+        $this->redirectWithSuccess('/admin/tournaments', 'Tournament created');
+    }
+    
+    public function startTournament(int $id): void {
+        if (!Session::isAdmin()) {
+            $this->jsonError('Unauthorized', 403);
+        }
+        
+        if (!$this->validateCsrf()) {
+            $this->jsonError('Invalid request', 403);
+        }
+        
+        $tournamentService = new \App\Services\TournamentService();
+        $success = $tournamentService->generateBracket($id);
+        
+        if ($success) {
+            $this->auditService->log('start_tournament', 'tournaments', $id);
+            $this->jsonSuccess(['message' => 'Tournament started']);
+        } else {
+            $this->jsonError('Failed to start tournament', 400);
+        }
+    }
+    
+    public function cancelTournament(int $id): void {
+        if (!Session::isAdmin()) {
+            $this->jsonError('Unauthorized', 403);
+        }
+        
+        if (!$this->validateCsrf()) {
+            $this->jsonError('Invalid request', 403);
+        }
+        
+        $tournamentModel = new \App\Models\Tournament();
+        $success = $tournamentModel->update($id, ['status' => 'cancelled']);
+        
+        if ($success) {
+            $this->auditService->log('cancel_tournament', 'tournaments', $id);
+            $this->jsonSuccess(['message' => 'Tournament cancelled']);
+        } else {
+            $this->jsonError('Failed to cancel tournament', 400);
+        }
+    }
+    
+    public function editTournamentRewards(int $id): void {
+        if (!Session::isAdmin()) {
+            $this->redirect('/admin');
+        }
+        
+        $tournamentModel = new \App\Models\Tournament();
+        $tournament = $tournamentModel->getWithRewards($id);
+        
+        if (!$tournament) {
+            $this->redirect('/admin/tournaments');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $this->view('admin/tournament-rewards', [
+                'tournament' => $tournament,
+                'csrf_token' => Session::csrfToken(),
+            ]);
+            return;
+        }
+        
+        if (!$this->validateCsrf()) {
+            $this->redirectWithError('/admin/tournaments', 'Invalid request');
+        }
+        
+        $db = \Core\Database::getInstance();
+        $db->prepare("DELETE FROM tournament_rewards WHERE tournament_id = ?")->execute([$id]);
+        
+        $places = $_POST['places'] ?? [];
+        foreach ($places as $place => $data) {
+            if (!empty($data['gold']) || !empty($data['gems']) || !empty($data['lootbox_type'])) {
+                $stmt = $db->prepare("
+                    INSERT INTO tournament_rewards (tournament_id, place, gold, gems, lootbox_type, lootbox_count)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([
+                    $id,
+                    (int)$place,
+                    (int)($data['gold'] ?? 0),
+                    (int)($data['gems'] ?? 0),
+                    $data['lootbox_type'] ?? null,
+                    (int)($data['lootbox_count'] ?? 0),
+                ]);
+            }
+        }
+        
+        $this->auditService->log('edit_tournament_rewards', 'tournaments', $id);
+        $this->redirectWithSuccess('/admin/tournaments', 'Rewards updated');
+    }
 }

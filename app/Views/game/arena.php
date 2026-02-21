@@ -1,4 +1,16 @@
 <?php ob_start(); ?>
+
+<div id="successToast" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="glass px-6 py-3 rounded-xl border border-emerald-500/30 text-emerald-400">
+        <span id="successMessage"></span>
+    </div>
+</div>
+<div id="errorToast" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="glass px-6 py-3 rounded-xl border border-red-500/30 text-red-400">
+        <span id="errorMessage"></span>
+    </div>
+</div>
+
 <div class="min-h-screen bg-[#0a0818] py-12 pt-24">
     <div class="max-w-7xl mx-auto px-6">
         <div class="flex items-center justify-between mb-10">
@@ -396,6 +408,18 @@ function declineChallenge(challengeId) {
             showToast(data.error || 'Failed to decline', 'error');
         }
     });
+}
+
+function showToast(message, type) {
+    const toast = document.getElementById(type === 'success' ? 'successToast' : 'errorToast');
+    const msg = document.getElementById(type === 'success' ? 'successMessage' : 'errorMessage');
+    
+    msg.textContent = message;
+    toast.classList.remove('hidden');
+    
+    setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 3000);
 }
 </script>
 <?php

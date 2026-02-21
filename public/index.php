@@ -117,6 +117,25 @@ if ($_ENV['APP_DEBUG'] === 'false' || $_ENV['APP_ENV'] === 'production') {
 date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'UTC');
 
 // ========================================
+// SECURITY HEADERS
+// ========================================
+
+$nonce = base64_encode(random_bytes(16));
+$isProduction = ($_ENV['APP_ENV'] ?? 'development') === 'production';
+
+if ($isProduction) {
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self'");
+} else {
+    header("Content-Security-Policy: default-src 'self' *; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://unpkg.com");
+}
+
+header("X-Content-Type-Options: nosniff");
+header("X-Frame-Options: DENY");
+header("X-XSS-Protection: 1; mode=block");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+define('CSP_NONCE', $nonce);
+
+// ========================================
 // SESSION INITIALIZATION
 // ========================================
 

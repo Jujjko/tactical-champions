@@ -1,5 +1,4 @@
 <?php
-// app/Services/BattleEngine.php
 declare(strict_types=1);
 
 namespace App\Services;
@@ -9,6 +8,27 @@ class BattleEngine {
     private array $playerTeam = [];
     private array $enemyTeam = [];
     private int $turn = 0;
+    private bool $isPvp = false;
+    private int $opponentId = 0;
+    private string $opponentName = '';
+    
+    public function setAsPvp(int $opponentId = 0, string $opponentName = 'Opponent'): void {
+        $this->isPvp = true;
+        $this->opponentId = $opponentId;
+        $this->opponentName = $opponentName;
+    }
+    
+    public function isPvp(): bool {
+        return $this->isPvp;
+    }
+    
+    public function getOpponentId(): int {
+        return $this->opponentId;
+    }
+    
+    public function getOpponentName(): string {
+        return $this->opponentName;
+    }
     
     /**
      * Initialize a new battle
@@ -499,7 +519,10 @@ class BattleEngine {
             'turn' => $this->turn,
             'player_team' => $this->playerTeam,
             'enemy_team' => $this->enemyTeam,
-            'battle_log' => $this->battleLog
+            'battle_log' => $this->battleLog,
+            'is_pvp' => $this->isPvp,
+            'opponent_id' => $this->opponentId,
+            'opponent_name' => $this->opponentName,
         ];
     }
     
@@ -511,6 +534,9 @@ class BattleEngine {
         $this->playerTeam = $state['player_team'] ?? [];
         $this->enemyTeam = $state['enemy_team'] ?? [];
         $this->battleLog = $state['battle_log'] ?? [];
+        $this->isPvp = $state['is_pvp'] ?? false;
+        $this->opponentId = $state['opponent_id'] ?? 0;
+        $this->opponentName = $state['opponent_name'] ?? '';
     }
     
     /**

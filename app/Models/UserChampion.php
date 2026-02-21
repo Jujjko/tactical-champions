@@ -4,21 +4,27 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Core\Model;
+use App\Services\CacheService;
 
 class UserChampion extends Model {
     protected string $table = 'user_champions';
     protected bool $softDeletes = true;
     
     public function getUserChampions(int $userId): array {
-        $stmt = $this->db->prepare("
-            SELECT uc.*, c.name, c.tier, c.special_ability, c.description, c.image_url
-            FROM {$this->table} uc
-            JOIN champions c ON uc.champion_id = c.id
-            WHERE uc.user_id = ? AND uc.deleted_at IS NULL
-            ORDER BY uc.stars DESC, uc.level DESC, c.tier DESC
-        ");
-        $stmt->execute([$userId]);
-        return $stmt->fetchAll();
+        $cache = CacheService::getInstance();
+        $key = "user:{$userId}:champions";
+        
+        return $cache->remember($key, function() use ($userId) {
+            $stmt = $this->db->prepare("
+                SELECT uc.*, c.name, c.tier, c.special_ability, c.description, c.image_url
+                FROM {$this->table} uc
+                JOIN champions c ON uc.champion_id = c.id
+                WHERE uc.user_id = ? AND uc.deleted_at IS NULL
+                ORDER BY uc.stars DESC, uc.level DESC, c.tier DESC
+            ");
+            $stmt->execute([$userId]);
+            return $stmt->fetchAll();
+        }, 120);
     }
     
     public function addChampionToUser(int $userId, int $championId): int {
@@ -27,10 +33,13 @@ class UserChampion extends Model {
         $champion = $stmt->fetch();
         
         if (!$champion) {
+            error_log("UserChampion::addChampionToUser - Champion not found: {$championId}");
             return 0;
         }
         
-        return $this->create([
+        error_log("UserChampion::addChampionToUser - Found champion: " . $champion['name']);
+        
+        $id = $this->create([
             'user_id' => $userId,
             'champion_id' => $championId,
             'level' => 1,
@@ -41,6 +50,11 @@ class UserChampion extends Model {
             'defense' => $champion['base_defense'],
             'speed' => $champion['base_speed']
         ]);
+        
+        error_log("UserChampion::addChampionToUser - Created user_champion with ID: {$id}");
+        
+        $this->invalidateCache($userId);
+        return $id;
     }
 
     public function getChampionWithDetails(int $userChampionId, int $userId): ?array {
@@ -82,6 +96,8 @@ class UserChampion extends Model {
             'defense' => $currentDefense,
             'speed' => $currentSpeed
         ]);
+        
+        $this->invalidateCache($champion['user_id']);
     }
     
     public function getChampionCount(int $userId): int
@@ -107,5 +123,9 @@ class UserChampion extends Model {
         ");
         $stmt->execute([$userId, $championId]);
         return $stmt->fetchAll();
+    }
+    
+    private function invalidateCache(int $userId): void {
+        CacheService::getInstance()->delete("user:{$userId}:champions");
     }
 }

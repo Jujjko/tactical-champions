@@ -44,6 +44,15 @@ $router->post('/arena/queue/join', 'ArenaController', 'joinQueue', [AuthMiddlewa
 $router->post('/arena/queue/leave', 'ArenaController', 'leaveQueue', [AuthMiddleware::class]);
 $router->get('/arena/queue/check', 'ArenaController', 'checkMatch', [AuthMiddleware::class]);
 
+// PvP Arena routes
+$router->get('/pvp', 'PvpController', 'index', [AuthMiddleware::class]);
+$router->post('/pvp/find-match', 'PvpController', 'findMatch', [AuthMiddleware::class]);
+$router->post('/pvp/start-battle', 'PvpController', 'startBattle', [AuthMiddleware::class]);
+$router->get('/pvp/battle', 'PvpController', 'battle', [AuthMiddleware::class]);
+$router->post('/pvp/action', 'PvpController', 'executeAction', [AuthMiddleware::class]);
+$router->get('/pvp/leaderboard', 'PvpController', 'leaderboard', [AuthMiddleware::class]);
+$router->get('/pvp/history', 'PvpController', 'history', [AuthMiddleware::class]);
+
 // Guild routes
 $router->get('/guilds', 'GuildController', 'index', [AuthMiddleware::class]);
 $router->get('/guilds/{id}', 'GuildController', 'show', [AuthMiddleware::class]);
@@ -126,3 +135,24 @@ $router->post('/admin/seasons/start', 'AdminController', 'startSeason', [AuthMid
 // Season routes
 $router->get('/season', 'SeasonController', 'index', [AuthMiddleware::class]);
 $router->post('/season/rewards/{id}/claim', 'SeasonController', 'claimReward', [AuthMiddleware::class]);
+
+// Leaderboard routes
+$router->get('/leaderboard', 'LeaderboardController', 'index');
+$router->get('/leaderboard/pvp', 'LeaderboardController', 'pvp');
+$router->get('/api/leaderboard', 'LeaderboardController', 'api');
+
+// Tournament routes
+$router->get('/tournaments', 'TournamentController', 'index', [AuthMiddleware::class]);
+$router->get('/tournaments/{id}', 'TournamentController', 'view', [AuthMiddleware::class]);
+$router->post('/tournaments/{id}/join', 'TournamentController', 'join', [AuthMiddleware::class]);
+$router->post('/tournaments/{id}/leave', 'TournamentController', 'leave', [AuthMiddleware::class]);
+$router->get('/tournaments/{id}/bracket', 'TournamentController', 'bracket', [AuthMiddleware::class]);
+$router->get('/tournaments/{tournamentId}/match/{matchId}', 'TournamentController', 'match', [AuthMiddleware::class]);
+$router->post('/tournaments/match/{matchId}/result', 'TournamentController', 'reportResult', [AuthMiddleware::class]);
+$router->get('/admin/tournaments', 'AdminController', 'tournaments', [AuthMiddleware::class, AdminMiddleware::class]);
+$router->get('/admin/tournaments/create', 'AdminController', 'createTournament', [AuthMiddleware::class, AdminMiddleware::class]);
+$router->post('/admin/tournaments/create', 'AdminController', 'createTournament', [AuthMiddleware::class, AdminMiddleware::class]);
+$router->post('/admin/tournaments/{id}/start', 'AdminController', 'startTournament', [AuthMiddleware::class, AdminMiddleware::class]);
+$router->post('/admin/tournaments/{id}/cancel', 'AdminController', 'cancelTournament', [AuthMiddleware::class, AdminMiddleware::class]);
+$router->get('/admin/tournaments/{id}/rewards', 'AdminController', 'editTournamentRewards', [AuthMiddleware::class, AdminMiddleware::class]);
+$router->post('/admin/tournaments/{id}/rewards', 'AdminController', 'editTournamentRewards', [AuthMiddleware::class, AdminMiddleware::class]);

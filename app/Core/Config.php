@@ -15,7 +15,9 @@ class Config {
         
         if ($value === 'true') return true;
         if ($value === 'false') return false;
-        if (is_numeric($value)) return strpos($value, '.') !== false ? (float)$value : (int)$value;
+        if (is_string($value) && is_numeric($value)) {
+            return strpos($value, '.') !== false ? (float)$value : (int)$value;
+        }
         
         self::$cache[$key] = $value;
         return $value;

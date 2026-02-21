@@ -4,19 +4,25 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Core\Model;
+use App\Services\CacheService;
 
 class Mission extends Model {
     protected string $table = 'missions';
     protected bool $softDeletes = true;
     
     public function getAvailableMissions(int $userLevel): array {
-        $stmt = $this->db->prepare("
-            SELECT * FROM {$this->table} 
-            WHERE is_active = 1 AND required_level <= ? AND deleted_at IS NULL
-            ORDER BY difficulty, required_level
-        ");
-        $stmt->execute([$userLevel]);
-        return $stmt->fetchAll();
+        $cache = CacheService::getInstance();
+        $key = "missions:available:{$userLevel}";
+        
+        return $cache->remember($key, function() use ($userLevel) {
+            $stmt = $this->db->prepare("
+                SELECT * FROM {$this->table} 
+                WHERE is_active = 1 AND required_level <= ? AND deleted_at IS NULL
+                ORDER BY difficulty, required_level
+            ");
+            $stmt->execute([$userLevel]);
+            return $stmt->fetchAll();
+        }, 300);
     }
     
     public function completeMission(int $userId, int $missionId): array {

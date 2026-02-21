@@ -1,4 +1,16 @@
 <?php ob_start(); ?>
+
+<div id="successToast" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="glass px-6 py-3 rounded-xl border border-emerald-500/30 text-emerald-400">
+        <span id="successMessage"></span>
+    </div>
+</div>
+<div id="errorToast" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="glass px-6 py-3 rounded-xl border border-red-500/30 text-red-400">
+        <span id="errorMessage"></span>
+    </div>
+</div>
+
 <div class="min-h-screen bg-[#0a0818] py-12 pt-24">
     <div class="max-w-4xl mx-auto px-6">
         <div class="text-center mb-10">
@@ -85,19 +97,20 @@ function completeStep(step) {
     fetch(`/tutorial/${step}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `csrf_token=${csrf}`
+        body: `csrf_token=${encodeURIComponent(csrf)}`
     })
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            if (data.data.reward_gold > 0) {
+            if (data.data && data.data.reward_gold > 0) {
                 showToast(`+${data.data.reward_gold} gold!`, 'success');
             }
             setTimeout(() => location.reload(), 500);
         } else {
             showToast(data.error || 'Failed to complete step', 'error');
         }
-    });
+    })
+    .catch(err => showToast('Error: ' + err.message, 'error'));
 }
 
 function skipTutorial() {
@@ -106,7 +119,7 @@ function skipTutorial() {
     fetch('/tutorial/skip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `csrf_token=${csrf}`
+        body: `csrf_token=${encodeURIComponent(csrf)}`
     })
     .then(res => res.json())
     .then(data => {
@@ -114,7 +127,20 @@ function skipTutorial() {
             showToast('Tutorial skipped', 'success');
             setTimeout(() => location.href = '/dashboard', 500);
         }
-    });
+    })
+    .catch(err => showToast('Error skipping tutorial', 'error'));
+}
+
+function showToast(message, type) {
+    const toast = document.getElementById(type === 'success' ? 'successToast' : 'errorToast');
+    const msg = document.getElementById(type === 'success' ? 'successMessage' : 'errorMessage');
+    
+    msg.textContent = message;
+    toast.classList.remove('hidden');
+    
+    setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 3000);
 }
 </script>
 <?php

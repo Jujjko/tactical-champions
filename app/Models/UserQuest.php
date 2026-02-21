@@ -80,13 +80,18 @@ class UserQuest extends Model {
         
         foreach ($quests as $quest) {
             $newProgress = min($quest['progress'] + $amount, $quest['requirement_value']);
-            $completed = $newProgress >= $quest['requirement_value'];
+            $isCompleted = $newProgress >= $quest['requirement_value'];
             
-            $this->update($quest['id'], [
+            $updateData = [
                 'progress' => $newProgress,
-                'completed' => $completed,
-                'completed_at' => $completed ? date('Y-m-d H:i:s') : null
-            ]);
+                'completed' => $isCompleted ? 1 : 0
+            ];
+            
+            if ($isCompleted) {
+                $updateData['completed_at'] = date('Y-m-d H:i:s');
+            }
+            
+            $this->update($quest['id'], $updateData);
         }
     }
     
@@ -105,7 +110,7 @@ class UserQuest extends Model {
         }
         
         $this->update($quest['id'], [
-            'claimed' => true,
+            'claimed' => 1,
             'claimed_at' => date('Y-m-d H:i:s')
         ]);
         

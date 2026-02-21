@@ -79,19 +79,25 @@ class BattleService {
         
         $enemyTeam = $this->generateEnemyTeam($mission);
         
+        error_log("BattleService: Player team count: " . count($playerTeam) . ", Enemy team count: " . count($enemyTeam));
+        
         $battleEngine = new BattleEngine();
         $battleEngine->initializeBattle($playerTeam, $enemyTeam);
         
-        $this->stateManager->save($userId, [
+        $state = $battleEngine->getState();
+        error_log("BattleService: Battle state generated, player_team count: " . count($state['player_team'] ?? []));
+        
+        $saveResult = $this->stateManager->save($userId, [
             'mission_id' => $missionId,
-            'battle_state' => $battleEngine->getState(),
+            'battle_state' => $state,
             'start_time' => time()
         ]);
+        error_log("BattleService: Save result: " . ($saveResult ? 'success' : 'failed'));
         
         return [
             'success' => true,
             'battle_id' => $missionId,
-            'state' => $battleEngine->getState()
+            'state' => $state
         ];
     }
     
@@ -113,14 +119,18 @@ class BattleService {
         );
         
         if ($result['battle_ended']) {
-            $this->endBattle($battleEngine, $result['winner'], $userId);
+            $rewards = $this->endBattle($battleEngine, $result['winner'], $userId);
+            $result['rewards'] = $rewards;
+            $result['mission'] = $this->missionModel->findById($battleState['mission_id']);
             return $result;
         }
         
         $aiResult = $battleEngine->executeAITurn();
         
         if ($aiResult['battle_ended']) {
-            $this->endBattle($battleEngine, $aiResult['winner'], $userId);
+            $rewards = $this->endBattle($battleEngine, $aiResult['winner'], $userId);
+            $aiResult['rewards'] = $rewards;
+            $aiResult['mission'] = $this->missionModel->findById($battleState['mission_id']);
             return $aiResult;
         }
         
@@ -194,7 +204,7 @@ class BattleService {
         return $enemyTeam;
     }
     
-    private function endBattle(BattleEngine $battleEngine, string $result, int $userId): void {
+    private function endBattle(BattleEngine $battleEngine, string $result, int $userId): array {
         $battleState = $this->stateManager->get($userId);
         $missionId = $battleState['mission_id'];
         $duration = time() - $battleState['start_time'];
@@ -225,6 +235,8 @@ class BattleService {
         ]);
         
         $this->stateManager->delete($userId);
+        
+        return $rewards;
     }
     
     private function awardChampionExperience(BattleEngine $battleEngine): void {

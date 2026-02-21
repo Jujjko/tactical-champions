@@ -20,3 +20,6 @@ public/uploads/*
 !public/uploads/.gitkeep
 *.tar.gz
 *.zip
+# PHPUnit
+.phpunit.cache/
+telemetry-id

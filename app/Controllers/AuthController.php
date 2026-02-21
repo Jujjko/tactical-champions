@@ -12,6 +12,7 @@ use App\Services\RateLimiter;
 use App\Services\DailyLoginService;
 use App\Services\AuditService;
 use App\Services\MailService;
+use App\Services\PlayerSetupService;
 
 class AuthController extends Controller {
     private User $userModel;
@@ -20,6 +21,7 @@ class AuthController extends Controller {
     private DailyLoginService $dailyLoginService;
     private AuditService $auditService;
     private MailService $mailService;
+    private PlayerSetupService $playerSetupService;
     
     public function __construct() {
         $this->userModel = new User();
@@ -28,6 +30,7 @@ class AuthController extends Controller {
         $this->dailyLoginService = new DailyLoginService();
         $this->auditService = new AuditService();
         $this->mailService = new MailService();
+        $this->playerSetupService = new PlayerSetupService();
     }
     
     public function showLogin(): void {
@@ -264,13 +267,13 @@ class AuthController extends Controller {
             return;
         }
         
-        // --- ISPRAVLJENI DIO ---
         $userId = $this->userModel->createUser(
             htmlspecialchars($_POST['username']),
             htmlspecialchars($_POST['email']),
             $_POST['password']
         );
-        // -----------------------
+        
+        $this->playerSetupService->setupNewPlayer($userId);
         
         $this->rateLimiter->clear($ipKey);
         

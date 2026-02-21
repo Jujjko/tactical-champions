@@ -192,7 +192,7 @@ function confirmPurchase() {
         closePurchaseModal();
         
         if (data.success) {
-            showToast(data.data.message || 'Purchase successful!', 'success');
+            showToast(data.message || 'Purchase successful!', 'success');
             setTimeout(() => location.reload(), 1500);
         } else {
             showToast(data.error || 'Purchase failed', 'error');

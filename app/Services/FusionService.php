@@ -5,10 +5,13 @@ namespace App\Services;
 
 use App\Models\UserChampion;
 use App\Models\Resource;
+use Core\Database;
 use Core\Session;
+use PDO;
 
 class FusionService
 {
+    private PDO $db;
     private UserChampion $userChampionModel;
     private Resource $resourceModel;
     
@@ -25,6 +28,7 @@ class FusionService
     
     public function __construct()
     {
+        $this->db = Database::getInstance()->getConnection();
         $this->userChampionModel = new UserChampion();
         $this->resourceModel = new Resource();
     }
@@ -41,7 +45,7 @@ class FusionService
             return [];
         }
         
-        $stmt = $this->userChampionModel->getDb()->prepare("
+        $stmt = $this->db->prepare("
             SELECT uc.*, c.name, c.tier
             FROM user_champions uc
             JOIN champions c ON uc.champion_id = c.id
