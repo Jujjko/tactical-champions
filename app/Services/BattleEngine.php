@@ -37,7 +37,6 @@ class BattleEngine {
         $this->battleLog = [];
         $this->turn = 0;
         
-        // Initialize player team with current HP
         foreach ($playerChampions as $champion) {
             $this->playerTeam[] = [
                 'id' => $champion['id'] ?? 0,
@@ -52,11 +51,12 @@ class BattleEngine {
                 'stunned' => false,
                 'frozen' => false,
                 'is_player' => true,
-                'alive' => true
+                'alive' => true,
+                'icon' => $champion['icon'] ?? '🛡️',
+                'image_url' => $champion['image_url'] ?? ''
             ];
         }
         
-        // Initialize enemy team
         foreach ($enemyChampions as $champion) {
             $this->enemyTeam[] = [
                 'id' => $champion['id'] ?? 'enemy_0',
@@ -71,7 +71,9 @@ class BattleEngine {
                 'stunned' => false,
                 'frozen' => false,
                 'is_player' => false,
-                'alive' => true
+                'alive' => true,
+                'icon' => $champion['icon'] ?? '👹',
+                'image_url' => $champion['image_url'] ?? ''
             ];
         }
     }

@@ -42,8 +42,16 @@ class AdminController extends Controller {
     public function users(): void {
         $page = (int)($_GET['page'] ?? 1);
         $userModel = new User();
+        $result = $userModel->paginate($page, 20, 'id', 'DESC');
         
-        $this->view('admin/users', $userModel->paginate($page, 20, 'id', 'DESC'));
+        $this->view('admin/users', [
+            'users' => $result['items'],
+            'total' => $result['total'],
+            'page' => $result['page'],
+            'perPage' => $result['per_page'],
+            'lastPage' => $result['last_page'],
+            'hasMore' => $result['has_more']
+        ]);
     }
     
     public function toggleUser(string $id): void {
@@ -78,8 +86,16 @@ class AdminController extends Controller {
     public function champions(): void {
         $page = (int)($_GET['page'] ?? 1);
         $championModel = new Champion();
+        $result = $championModel->paginate($page, 20, 'tier', 'DESC');
         
-        $this->view('admin/champions', $championModel->paginate($page, 20, 'tier', 'DESC'));
+        $this->view('admin/champions', [
+            'champions' => $result['items'],
+            'total' => $result['total'],
+            'page' => $result['page'],
+            'perPage' => $result['per_page'],
+            'lastPage' => $result['last_page'],
+            'hasMore' => $result['has_more']
+        ]);
     }
     
     public function getChampion(string $id): void {
@@ -101,12 +117,12 @@ class AdminController extends Controller {
     
     public function createChampion(): void {
         if (!Session::isAdmin()) {
-            $this->redirect('/admin');
+            $this->jsonError('Unauthorized', 403);
             return;
         }
         
         if (!$this->validateCsrf()) {
-            $this->redirectWithError('/admin/champions', 'Invalid request');
+            $this->jsonError('Invalid request', 403);
             return;
         }
         
@@ -120,8 +136,18 @@ class AdminController extends Controller {
         ]);
         
         if (!$validation['valid']) {
-            $this->redirectWithError('/admin/champions', $validation['firstError']);
+            $this->jsonError($validation['firstError'], 400);
             return;
+        }
+        
+        $imageUrl = htmlspecialchars($_POST['image_url'] ?? '');
+        
+        if (!empty($_FILES['image_file']['name'])) {
+            $imageService = new \App\Services\ImageUploadService();
+            $uploadedUrl = $imageService->upload($_FILES['image_file'], 'champion');
+            if ($uploadedUrl) {
+                $imageUrl = $uploadedUrl;
+            }
         }
         
         $championModel = new Champion();
@@ -133,14 +159,16 @@ class AdminController extends Controller {
             'base_defense' => (int)$_POST['defense'],
             'base_speed' => (int)$_POST['speed'],
             'special_ability' => htmlspecialchars($_POST['special_ability'] ?? ''),
-            'description' => htmlspecialchars($_POST['description'] ?? '')
+            'description' => htmlspecialchars($_POST['description'] ?? ''),
+            'image_url' => $imageUrl,
+            'icon' => htmlspecialchars($_POST['icon'] ?? '')
         ];
         
         $championId = $championModel->create($data);
         
         $this->auditService->logCreate('champion', $championId, $data);
         
-        $this->redirectWithSuccess('/admin/champions', 'Champion created successfully');
+        $this->jsonSuccess(['champion_id' => $championId, 'message' => 'Champion created successfully']);
     }
     
     public function updateChampion(string $id): void {
@@ -162,6 +190,28 @@ class AdminController extends Controller {
             return;
         }
         
+        error_log("FILES: " . json_encode($_FILES));
+        error_log("POST: " . json_encode($_POST));
+        
+        $imageUrl = $oldChampion['image_url'] ?? '';
+        
+        if (!empty($_POST['image_url'])) {
+            $imageUrl = $_POST['image_url'];
+        }
+        
+        if (!empty($_FILES['image_file']['name'])) {
+            $imageService = new \App\Services\ImageUploadService();
+            $uploadedUrl = $imageService->upload($_FILES['image_file'], 'champion');
+            if ($uploadedUrl) {
+                if (!empty($oldChampion['image_url']) && str_starts_with($oldChampion['image_url'], '/images/')) {
+                    $imageService->delete($oldChampion['image_url']);
+                }
+                $imageUrl = $uploadedUrl;
+            } else {
+                error_log("Image upload failed for champion {$id}");
+            }
+        }
+        
         $data = [
             'name' => htmlspecialchars($_POST['name']),
             'tier' => $_POST['tier'],
@@ -170,13 +220,15 @@ class AdminController extends Controller {
             'base_defense' => (int)$_POST['defense'],
             'base_speed' => (int)$_POST['speed'],
             'special_ability' => htmlspecialchars($_POST['special_ability'] ?? ''),
-            'description' => htmlspecialchars($_POST['description'] ?? '')
+            'description' => htmlspecialchars($_POST['description'] ?? ''),
+            'image_url' => $imageUrl,
+            'icon' => htmlspecialchars($_POST['icon'] ?? '')
         ];
         
         $championModel->update((int)$id, $data);
         $this->auditService->logUpdate('champion', (int)$id, $oldChampion, $data);
         
-        $this->jsonSuccess(['champion_id' => (int)$id]);
+        $this->jsonSuccess(['champion_id' => (int)$id, 'image_url' => $imageUrl]);
     }
     
     public function deleteChampion(string $id): void {
@@ -207,8 +259,15 @@ class AdminController extends Controller {
     public function missions(): void {
         $page = (int)($_GET['page'] ?? 1);
         $missionModel = new Mission();
+        $result = $missionModel->paginate($page, 20, 'id', 'DESC');
         
-        $this->view('admin/missions', $missionModel->paginate($page, 20, 'id', 'DESC'));
+        $this->view('admin/missions', [
+            'missions' => $result['items'],
+            'total' => $result['total'],
+            'page' => $result['page'],
+            'perPage' => $result['per_page'],
+            'lastPage' => $result['last_page']
+        ]);
     }
     
     public function saveMission(): void {
@@ -349,8 +408,15 @@ class AdminController extends Controller {
     public function equipment(): void {
         $page = (int)($_GET['page'] ?? 1);
         $equipmentModel = new Equipment();
+        $result = $equipmentModel->paginate($page, 20, 'tier', 'DESC');
         
-        $this->view('admin/equipment', $equipmentModel->paginate($page, 20, 'tier', 'DESC'));
+        $this->view('admin/equipment', [
+            'items' => $result['items'],
+            'total' => $result['total'],
+            'page' => $result['page'],
+            'perPage' => $result['per_page'],
+            'lastPage' => $result['last_page']
+        ]);
     }
     
     public function createEquipment(): void {

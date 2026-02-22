@@ -1,47 +1,37 @@
 <?php ob_start(); ?>
-<div class="min-h-screen bg-[#0a0818] py-12 pt-24">
+<div class="min-h-screen bg-[#0a0818] py-12">
     <div class="max-w-6xl mx-auto px-6">
-        <a href="/missions" class="inline-flex items-center gap-3 text-white/60 hover:text-white mb-8 transition">
-            <i data-lucide="arrow-left" class="w-5 h-5"></i> Back to Missions
+        <a href="/missions" class="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition">
+            ← Back to Missions
         </a>
 
         <!-- Mission Header -->
-        <div class="glass rounded-3xl p-8 mb-8 neon-glow">
-            <div class="flex justify-between items-start flex-wrap gap-4">
+        <div class="glass rounded-3xl p-10 mb-10 neon-glow">
+            <div class="flex justify-between items-start">
                 <div>
-                    <h1 class="title-font text-4xl font-bold"><?= htmlspecialchars($mission['name']) ?></h1>
-                    <span class="difficulty-<?= $mission['difficulty'] ?> text-lg px-6 py-2 rounded-full mt-4 inline-block text-white">
+                    <h1 class="title-font text-5xl font-bold"><?= htmlspecialchars($mission['name']) ?></h1>
+                    <span class="inline-block mt-4 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl text-sm font-medium tracking-wide">
                         <?= strtoupper($mission['difficulty']) ?> • <?= $mission['enemy_count'] ?> ENEMIES
                     </span>
                 </div>
                 <div class="text-right">
-                    <div class="text-emerald-400 text-5xl font-bold">⚡ <?= $mission['energy_cost'] ?></div>
-                    <div class="uppercase text-sm tracking-widest text-white/60">Energy Cost</div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-5xl">⚡</span>
+                        <div>
+                            <div class="text-5xl font-bold text-emerald-400"><?= $mission['energy_cost'] ?></div>
+                            <div class="text-xs tracking-widest uppercase text-emerald-400/80">ENERGY</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <p class="text-white/60 mt-4 max-w-lg"><?= htmlspecialchars($mission['description']) ?></p>
-            
-            <div class="grid grid-cols-3 gap-6 mt-6">
-                <div class="bg-white/5 rounded-xl p-4 text-center">
-                    <div class="text-xs text-white/50 uppercase">Gold Reward</div>
-                    <div class="text-2xl font-bold text-yellow-400">💰 <?= number_format($mission['gold_reward']) ?></div>
-                </div>
-                <div class="bg-white/5 rounded-xl p-4 text-center">
-                    <div class="text-xs text-white/50 uppercase">XP Reward</div>
-                    <div class="text-2xl font-bold text-indigo-400">✨ <?= $mission['experience_reward'] ?></div>
-                </div>
-                <div class="bg-white/5 rounded-xl p-4 text-center">
-                    <div class="text-xs text-white/50 uppercase">Lootbox Chance</div>
-                    <div class="text-2xl font-bold text-purple-400">📦 <?= $mission['lootbox_chance'] ?>%</div>
-                </div>
-            </div>
+            <p class="text-white/70 mt-6 max-w-lg"><?= htmlspecialchars($mission['description']) ?></p>
         </div>
 
         <!-- Team Selection -->
-        <div class="glass rounded-3xl p-8">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-semibold">Select Your Team <span class="text-white/50">(max 5)</span></h2>
-                <div id="selected-count" class="text-2xl font-bold text-indigo-400">0 / 5</div>
+        <div class="glass rounded-3xl p-10">
+            <div class="flex justify-between items-center mb-10">
+                <h2 class="text-3xl font-semibold">Select Your Team <span class="text-white/50">(max 5)</span></h2>
+                <div id="selected-count" class="text-3xl font-bold text-indigo-400 transition-all duration-300">0 / 5</div>
             </div>
 
             <?php if (empty($champions)): ?>
@@ -54,35 +44,53 @@
                 </a>
             </div>
             <?php else: ?>
-            <div id="champion-selection" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div id="champion-selection" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 <?php foreach ($champions as $champion): ?>
-                <div class="champion-select-card glass rounded-2xl overflow-hidden cursor-pointer group transition-all" data-champion-id="<?= $champion['id'] ?>">
-                    <div class="h-32 bg-gradient-to-br from-violet-900/50 to-fuchsia-900/50 flex items-center justify-center text-6xl group-hover:scale-110 transition">
-                        🛡️
-                    </div>
-                    <div class="p-4">
-                        <div class="flex items-center justify-between mb-1">
-                            <h4 class="font-semibold text-sm truncate"><?= htmlspecialchars($champion['name']) ?></h4>
-                            <span class="tier-<?= $champion['tier'] ?> text-xs px-2 py-0.5 rounded-full text-white">
-                                <?= ucfirst($champion['tier']) ?>
-                            </span>
+                <div class="champion-select-card group relative cursor-pointer" data-champion-id="<?= $champion['id'] ?>">
+                    
+                    <!-- Glow border -->
+                    <div class="absolute -inset-[3px] bg-gradient-to-br 
+                        <?= $champion['tier'] === 'epic' ? 'from-purple-500 to-pink-500' : 
+                           ($champion['tier'] === 'rare' ? 'from-blue-500 to-cyan-500' : 'from-zinc-500 to-slate-500') ?> 
+                        opacity-0 group-hover:opacity-40 transition-all duration-500 rounded-[22px] -z-10"></div>
+
+                    <div class="relative glass rounded-3xl overflow-hidden transition-all duration-300 group-hover:scale-[1.06]">
+                        <div class="h-56 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center relative overflow-hidden">
+                            <?php if (!empty($champion['image_url'])): ?>
+                                <img src="<?= htmlspecialchars($champion['image_url']) ?>" alt="" class="w-full h-full object-cover">
+                            <?php else: ?>
+                                <span class="text-8xl"><?= $champion['icon'] ?? '🛡️' ?></span>
+                            <?php endif; ?>
+                            <div class="absolute top-4 right-4">
+                                <span class="tier-badge tier-<?= $champion['tier'] ?> text-xs px-5 py-1.5">
+                                    <?= ucfirst($champion['tier']) ?>
+                                </span>
+                            </div>
                         </div>
-                        <div class="text-xs text-white/60 mb-2">Level <?= $champion['level'] ?></div>
-                        
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div class="text-emerald-400">❤️ <?= $champion['health'] ?></div>
-                            <div class="text-rose-400">⚔️ <?= $champion['attack'] ?></div>
-                            <div class="text-amber-400">🛡️ <?= $champion['defense'] ?></div>
-                            <div class="text-cyan-400">⚡ <?= $champion['speed'] ?></div>
+
+                        <div class="p-6">
+                            <h4 class="font-semibold text-lg"><?= htmlspecialchars($champion['name']) ?></h4>
+                            <div class="text-sm text-white/60">Lv.<?= $champion['level'] ?></div>
+
+                            <div class="mt-6 grid grid-cols-2 gap-4 text-sm">
+                                <div>❤️ <span class="font-bold text-emerald-400"><?= $champion['health'] ?></span></div>
+                                <div>⚔️ <span class="font-bold text-rose-400"><?= $champion['attack'] ?></span></div>
+                                <div>🛡️ <span class="font-bold text-amber-400"><?= $champion['defense'] ?></span></div>
+                                <div>⚡ <span class="font-bold text-sky-400"><?= $champion['speed'] ?></span></div>
+                            </div>
+                        </div>
+
+                        <!-- Selected Checkmark -->
+                        <div class="select-check absolute top-5 right-5 w-10 h-10 bg-emerald-500 text-white rounded-2xl flex items-center justify-center text-3xl scale-0 shadow-2xl transition-all duration-300">
+                            ✓
                         </div>
                     </div>
-                    <div class="select-overlay bg-emerald-500 text-white text-2xl font-bold">✓</div>
                 </div>
                 <?php endforeach; ?>
             </div>
 
             <button id="start-battle-btn" 
-                    class="mt-8 w-full py-5 text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-2xl transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    class="mt-12 w-full py-7 text-2xl font-bold bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 rounded-3xl disabled:opacity-40 hover:scale-[1.03] transition-all duration-300 shadow-2xl"
                     disabled>
                 START BATTLE
             </button>
@@ -91,64 +99,43 @@
     </div>
 </div>
 
-<style>
-.champion-select-card {
-    border: 2px solid transparent;
-    position: relative;
-}
-.champion-select-card:hover {
-    border-color: rgba(99, 102, 241, 0.5);
-}
-.champion-select-card.selected {
-    border-color: #22c55e;
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
-}
-.champion-select-card .select-overlay {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: none;
-    align-items: center;
-    justify-content: center;
-}
-.champion-select-card.selected .select-overlay {
-    display: flex;
-}
-</style>
-
 <script>
 const selectedChampions = new Set();
 const maxChampions = 5;
+const countEl = document.getElementById('selected-count');
+const startBtn = document.getElementById('start-battle-btn');
 
 document.querySelectorAll('.champion-select-card').forEach(card => {
     card.addEventListener('click', () => {
-        const championId = card.dataset.championId;
+        const id = card.dataset.championId;
         
-        if (card.classList.contains('selected')) {
+        if (selectedChampions.has(id)) {
+            selectedChampions.delete(id);
+            card.querySelector('.select-check').classList.remove('scale-100', 'rotate-12');
             card.classList.remove('selected');
-            selectedChampions.delete(championId);
+        } else if (selectedChampions.size < maxChampions) {
+            selectedChampions.add(id);
+            const check = card.querySelector('.select-check');
+            check.classList.add('scale-100', 'rotate-12');
+            card.classList.add('selected');
         } else {
-            if (selectedChampions.size < maxChampions) {
-                card.classList.add('selected');
-                selectedChampions.add(championId);
-            } else {
-                alert(`Maximum ${maxChampions} champions allowed!`);
-            }
+            card.classList.add('animate-shake');
+            setTimeout(() => card.classList.remove('animate-shake'), 600);
         }
         
-        updateSelectedCount();
+        updateUI();
     });
 });
 
-function updateSelectedCount() {
-    document.getElementById('selected-count').textContent = `${selectedChampions.size} / ${maxChampions}`;
-    document.getElementById('start-battle-btn').disabled = selectedChampions.size === 0;
+function updateUI() {
+    countEl.textContent = `${selectedChampions.size} / ${maxChampions}`;
+    startBtn.disabled = selectedChampions.size === 0;
+    
+    countEl.classList.add('scale-125');
+    setTimeout(() => countEl.classList.remove('scale-125'), 180);
 }
 
-document.getElementById('start-battle-btn').addEventListener('click', () => {
+document.getElementById('start-battle-btn')?.addEventListener('click', () => {
     if (selectedChampions.size === 0) return;
     
     const formData = new FormData();
@@ -170,6 +157,19 @@ document.getElementById('start-battle-btn').addEventListener('click', () => {
     })
     .catch(err => alert('Error: ' + err.message));
 });
+
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20%, 60% { transform: translateX(-8px); }
+        40%, 80% { transform: translateX(8px); }
+    }
+    .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+    .champion-select-card.selected .glass { border: 2px solid #22c55e; box-shadow: 0 0 30px rgba(34, 197, 94, 0.5); }
+    .select-check.scale-100 { transform: scale(1) rotate(12deg); }
+`;
+document.head.appendChild(style);
 </script>
 <?php
 $content = ob_get_clean();

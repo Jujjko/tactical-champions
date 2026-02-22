@@ -29,9 +29,21 @@ class ChampionController extends Controller {
         $userId = Session::userId();
         
         $championModel = new UserChampion();
+        $champions = $championModel->getUserChampions($userId);
+        
+        $fusionEligible = [];
+        foreach ($champions as $champion) {
+            if ($champion['stars'] < 5) {
+                $candidates = $this->fusionService->getFusionCandidates($userId, (int)$champion['id']);
+                if (count($candidates) > 0) {
+                    $fusionEligible[$champion['id']] = true;
+                }
+            }
+        }
         
         $this->view('game/champions', [
-            'champions' => $championModel->getUserChampions($userId)
+            'champions' => $champions,
+            'fusionEligible' => $fusionEligible,
         ]);
     }
     

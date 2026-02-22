@@ -46,7 +46,7 @@ class FusionService
         }
         
         $stmt = $this->db->prepare("
-            SELECT uc.*, c.name, c.tier
+            SELECT uc.*, c.name, c.tier, c.image_url, c.icon
             FROM user_champions uc
             JOIN champions c ON uc.champion_id = c.id
             WHERE uc.user_id = ?
@@ -164,7 +164,7 @@ class FusionService
         ];
     }
     
-    public function getStarBonus(int $stars): float
+    public static function getStarBonus(int $stars): float
     {
         return self::STAR_BONUS_MULTIPLIER[$stars] ?? 1.0;
     }

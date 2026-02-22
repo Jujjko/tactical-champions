@@ -73,25 +73,17 @@ class QuestController extends Controller {
         }
         
         $userQuestModel = new UserQuest();
-        
-        $stmt = $this->db->prepare("
-            SELECT uq.id
-            FROM user_quests uq
-            JOIN quests q ON uq.quest_id = q.id
-            WHERE uq.user_id = ? AND uq.completed = TRUE AND uq.claimed = FALSE
-        ");
-        $stmt->execute([$userId]);
-        $quests = $stmt->fetchAll();
+        $unclaimedQuests = $userQuestModel->getUnclaimedQuests($userId);
         
         $totalGold = 0;
         $totalGems = 0;
         $claimed = 0;
         
-        foreach ($quests as $q) {
+        foreach ($unclaimedQuests as $q) {
             $result = $userQuestModel->claimReward($userId, $q['id']);
             if ($result['success']) {
-                $totalGold += $result['rewards']['gold'];
-                $totalGems += $result['rewards']['gems'];
+                $totalGold += $result['rewards']['gold'] ?? 0;
+                $totalGems += $result['rewards']['gems'] ?? 0;
                 $claimed++;
             }
         }

@@ -163,21 +163,6 @@
     </div>
 </div>
 
-<!-- Toast notifications -->
-<div id="successToast" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 hidden">
-    <div class="glass rounded-2xl px-8 py-4 border border-emerald-500/30 bg-emerald-500/20 flex items-center gap-3 shadow-xl">
-        <span class="text-2xl">✅</span>
-        <span id="successMessage" class="text-emerald-400 font-medium"></span>
-    </div>
-</div>
-
-<div id="errorToast" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 hidden">
-    <div class="glass rounded-2xl px-8 py-4 border border-red-500/30 bg-red-500/20 flex items-center gap-3 shadow-xl">
-        <span class="text-2xl">❌</span>
-        <span id="errorMessage" class="text-red-400 font-medium"></span>
-    </div>
-</div>
-
 <script>
 const csrf = '<?= \Core\Session::csrfToken() ?>';
 
@@ -190,10 +175,10 @@ function claimQuest(userQuestId) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            const r = data.data.rewards;
+            const r = data.rewards;
             let msg = 'Reward claimed!';
-            if (r.gold > 0) msg += ` +${r.gold} gold`;
-            if (r.gems > 0) msg += ` +${r.gems} gems`;
+            if (r && r.gold > 0) msg += ` +${r.gold} gold`;
+            if (r && r.gems > 0) msg += ` +${r.gems} gems`;
             showToast(msg, 'success');
             setTimeout(() => location.reload(), 1500);
         } else {
@@ -211,24 +196,12 @@ function claimAll() {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            showToast(`${data.data.message} +${data.data.gold} gold, +${data.data.gems} gems`, 'success');
+            showToast(`${data.message} +${data.gold} gold, +${data.gems} gems`, 'success');
             setTimeout(() => location.reload(), 1500);
         } else {
             showToast(data.error || 'Failed to claim', 'error');
         }
     });
-}
-
-function showToast(message, type) {
-    const toast = document.getElementById(type === 'success' ? 'successToast' : 'errorToast');
-    const msg = document.getElementById(type === 'success' ? 'successMessage' : 'errorMessage');
-    
-    msg.textContent = message;
-    toast.classList.remove('hidden');
-    
-    setTimeout(() => {
-        toast.classList.add('hidden');
-    }, 3000);
 }
 </script>
 <?php

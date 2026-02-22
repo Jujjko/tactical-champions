@@ -26,6 +26,7 @@ $router->get('/battle-history', 'ChampionController', 'history', [AuthMiddleware
 $router->get('/missions', 'MissionController', 'index', [AuthMiddleware::class]);
 $router->get('/lootbox', 'LootboxController', 'index', [AuthMiddleware::class]);
 $router->post('/lootbox/{id}/open', 'LootboxController', 'open', [AuthMiddleware::class]);
+$router->post('/lootbox/open-multiple', 'LootboxController', 'openMultiple', [AuthMiddleware::class]);
 $router->get('/inventory', 'GameController', 'inventory', [AuthMiddleware::class]);
 
 // Equipment routes

@@ -15,14 +15,14 @@ class LootboxController extends Controller {
         $userId = Session::userId();
         
         $lootboxModel = new Lootbox();
-        $lootboxes = $lootboxModel->getUserLootboxes($userId);
+        $counts = $lootboxModel->getLootboxCounts($userId);
         
         $this->view('game/lootbox', [
-            'lootboxes' => $lootboxes
+            'counts' => $counts
         ]);
     }
     
-public function open(string $id): void {
+    public function open(string $id): void {
         if (!Session::validateCsrfToken($_POST['csrf_token'] ?? null)) {
             $this->json(['error' => 'Invalid request'], 403);
             return;
@@ -50,11 +50,9 @@ public function open(string $id): void {
         
         $rewards = $lootboxModel->openLootbox($lootboxId);
         
-        // Award resources
         $resourceModel->addGold($userId, $rewards['gold']);
         $resourceModel->addGems($userId, $rewards['gems']);
         
-        // Award champion if won
         $championData = null;
         if ($rewards['champion']) {
             $champion = $championModel->getRandomByRarity();
@@ -68,6 +66,62 @@ public function open(string $id): void {
             'success' => true,
             'rewards' => $rewards,
             'champion' => $championData
+        ]);
+    }
+    
+    public function openMultiple(): void {
+        if (!Session::validateCsrfToken($_POST['csrf_token'] ?? null)) {
+            $this->json(['error' => 'Invalid request'], 403);
+            return;
+        }
+        
+        $userId = Session::userId();
+        $type = $_POST['type'] ?? 'bronze';
+        $count = min((int)($_POST['count'] ?? 1), 100);
+        
+        $lootboxModel = new Lootbox();
+        $resourceModel = new Resource();
+        $championModel = new Champion();
+        $userChampionModel = new UserChampion();
+        
+        $counts = $lootboxModel->getLootboxCounts($userId);
+        
+        if ($counts[$type] < $count) {
+            $count = $counts[$type];
+        }
+        
+        if ($count <= 0) {
+            $this->json(['error' => 'No lootboxes available'], 400);
+            return;
+        }
+        
+        $lootboxIds = $lootboxModel->getLootboxIdsByType($userId, $type, $count);
+        $results = $lootboxModel->openMultiple($lootboxIds);
+        
+        $resourceModel->addGold($userId, $results['total_gold']);
+        $resourceModel->addGems($userId, $results['total_gems']);
+        
+        $champions = [];
+        for ($i = 0; $i < $results['champions_won']; $i++) {
+            $champion = $championModel->getRandomByRarity();
+            if ($champion) {
+                $userChampionModel->addChampionToUser($userId, $champion['id']);
+                $champions[] = $champion;
+            }
+        }
+        
+        $remainingCounts = $lootboxModel->getLootboxCounts($userId);
+        
+        $this->json([
+            'success' => true,
+            'opened' => $results['opened_count'],
+            'rewards' => [
+                'gold' => $results['total_gold'],
+                'gems' => $results['total_gems']
+            ],
+            'champions' => $champions,
+            'by_type' => $results['by_type'],
+            'remaining' => $remainingCounts
         ]);
     }
 }

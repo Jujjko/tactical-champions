@@ -19,6 +19,7 @@ class BattleService {
     private User $userModel;
     private BattleStateManager $stateManager;
     private ?QuestService $questService = null;
+    private ?AchievementService $achievementService = null;
     
     public function __construct() {
         $this->missionModel = new Mission();
@@ -29,6 +30,7 @@ class BattleService {
         $this->userModel = new User();
         $this->stateManager = new BattleStateManager();
         $this->questService = new QuestService();
+        $this->achievementService = new AchievementService();
     }
     
     public function getBattlePreparationData(int $missionId, int $userId): array {
@@ -197,7 +199,9 @@ class BattleService {
                 'attack' => (int)($randomChamp['base_attack'] * $multiplier),
                 'defense' => (int)($randomChamp['base_defense'] * $multiplier),
                 'speed' => (int)($randomChamp['base_speed'] * $multiplier),
-                'special_ability' => $randomChamp['special_ability']
+                'special_ability' => $randomChamp['special_ability'],
+                'icon' => $randomChamp['icon'] ?? '👹',
+                'image_url' => $randomChamp['image_url'] ?? ''
             ];
         }
         
@@ -206,33 +210,53 @@ class BattleService {
     
     private function endBattle(BattleEngine $battleEngine, string $result, int $userId): array {
         $battleState = $this->stateManager->get($userId);
-        $missionId = $battleState['mission_id'];
-        $duration = time() - $battleState['start_time'];
+        $missionId = $battleState['mission_id'] ?? 0;
+        $duration = time() - ($battleState['start_time'] ?? time());
         
-        $mission = $this->missionModel->findById($missionId);
+        $mission = $missionId ? $this->missionModel->findById($missionId) : null;
         $rewards = [];
         
         $won = ($result === 'victory');
-        $this->questService->trackBattle($userId, $won);
         
-        if ($won) {
+        try {
+            $this->questService->trackBattle($userId, $won);
+        } catch (\Exception $e) {
+            error_log("Quest tracking error: " . $e->getMessage());
+        }
+        
+        if ($won && $mission) {
             $rewards = $this->missionModel->completeMission($userId, $missionId);
-            $this->resourceModel->addGold($userId, $rewards['gold']);
-            $this->userModel->addExperience($userId, $rewards['experience']);
+            $this->resourceModel->addGold($userId, $rewards['gold'] ?? 0);
+            $this->userModel->addExperience($userId, $rewards['experience'] ?? 0);
             
-            $this->questService->trackMission($userId);
+            if (!empty($rewards['lootbox'])) {
+                $this->resourceModel->addLootbox($userId, 'bronze');
+            }
+            
+            try {
+                $this->questService->trackMission($userId);
+                $this->achievementService->trackBattleWin($userId);
+                $this->achievementService->trackMissionCompleted($userId);
+                
+                $user = $this->userModel->findById($userId);
+                $this->achievementService->trackLevelUp($userId, $user['level'] ?? 1);
+            } catch (\Exception $e) {
+                error_log("Achievement tracking error: " . $e->getMessage());
+            }
             
             $this->awardChampionExperience($battleEngine);
         }
         
-        $this->battleModel->create([
-            'user_id' => $userId,
-            'mission_id' => $missionId,
-            'result' => $result,
-            'duration_seconds' => $duration,
-            'champions_used' => json_encode($battleEngine->getState()['player_team']),
-            'rewards_earned' => json_encode($rewards)
-        ]);
+        if ($missionId) {
+            $this->battleModel->create([
+                'user_id' => $userId,
+                'mission_id' => $missionId,
+                'result' => $result,
+                'duration_seconds' => $duration,
+                'champions_used' => json_encode($battleEngine->getState()['player_team'] ?? []),
+                'rewards_earned' => json_encode($rewards)
+            ]);
+        }
         
         $this->stateManager->delete($userId);
         

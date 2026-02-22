@@ -18,6 +18,7 @@ class PvpService {
     private UserChampion $championModel;
     private PvpRewardsLog $rewardsLog;
     private SeasonService $seasonService;
+    private ?AchievementService $achievementService = null;
     
     private const MIN_RATING_GAIN = 10;
     private const MAX_RATING_GAIN = 35;
@@ -43,6 +44,7 @@ class PvpService {
         $this->championModel = new UserChampion();
         $this->rewardsLog = new PvpRewardsLog();
         $this->seasonService = new SeasonService();
+        $this->achievementService = new AchievementService();
     }
     
     public function startPvpBattle(int $attackerId, int $defenderId, int $attackerChampionId, int $defenderChampionId): array {
@@ -123,6 +125,10 @@ class PvpService {
         ]);
         
         $rewards = $this->givePvpRewards($attackerId, $defenderId, $result, $battleId);
+        
+        if ($result === 'victory') {
+            $this->achievementService->trackPvpWin($attackerId);
+        }
         
         return [
             'success' => true,

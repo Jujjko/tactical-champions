@@ -16,7 +16,7 @@ class UserChampion extends Model {
         
         return $cache->remember($key, function() use ($userId) {
             $stmt = $this->db->prepare("
-                SELECT uc.*, c.name, c.tier, c.special_ability, c.description, c.image_url
+                SELECT uc.*, c.name, c.tier, c.special_ability, c.description, c.image_url, c.icon
                 FROM {$this->table} uc
                 JOIN champions c ON uc.champion_id = c.id
                 WHERE uc.user_id = ? AND uc.deleted_at IS NULL
@@ -59,7 +59,7 @@ class UserChampion extends Model {
 
     public function getChampionWithDetails(int $userChampionId, int $userId): ?array {
         $stmt = $this->db->prepare("
-            SELECT uc.*, c.name, c.tier, c.special_ability, c.description, c.image_url
+            SELECT uc.*, c.name, c.tier, c.special_ability, c.description, c.image_url, c.icon
             FROM {$this->table} uc
             JOIN champions c ON uc.champion_id = c.id
             WHERE uc.id = ? AND uc.user_id = ? AND uc.deleted_at IS NULL

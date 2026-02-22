@@ -142,35 +142,64 @@ declare(strict_types=1);
 <body class="bg-[#0a0818] text-white min-h-screen">
     <?php if (\Core\Session::isLoggedIn()): ?>
     <nav class="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur-2xl">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-2xl">⚔️</div>
-                <a href="/dashboard" class="title-font text-2xl font-bold tracking-tight hover:text-indigo-400 transition">Tactical Champions</a>
+                <a href="/dashboard" class="title-font text-xl font-bold tracking-tight hover:text-indigo-400 transition hidden sm:block">Tactical Champions</a>
             </div>
             
-            <div class="flex items-center gap-8 text-sm font-medium">
-                <a href="/dashboard" class="text-white hover:text-indigo-400 transition">Dashboard</a>
-                <a href="/quests" class="text-white/70 hover:text-white transition">Quests</a>
-                <a href="/champions" class="text-white/70 hover:text-white transition">Champions</a>
-                <a href="/equipment" class="text-white/70 hover:text-white transition">Equipment</a>
-                <a href="/missions" class="text-white/70 hover:text-white transition">Missions</a>
-                <a href="/arena" class="text-white/70 hover:text-white transition">Arena</a>
-                <a href="/guilds" class="text-white/70 hover:text-white transition">Guilds</a>
-                <a href="/shop" class="text-white/70 hover:text-white transition">Shop</a>
-                <a href="/tutorial" class="text-white/70 hover:text-white transition">Tutorial</a>
+            <div class="flex items-center gap-1">
+                <a href="/dashboard" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Dashboard">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5 text-white/70 group-hover:text-indigo-400 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Dashboard</span>
+                </a>
+                <a href="/quests" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Quests">
+                    <i data-lucide="scroll-text" class="w-5 h-5 text-white/70 group-hover:text-amber-400 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Quests</span>
+                </a>
+                <a href="/champions" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Champions">
+                    <i data-lucide="swords" class="w-5 h-5 text-white/70 group-hover:text-purple-400 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Champions</span>
+                </a>
+                <a href="/equipment" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Equipment">
+                    <i data-lucide="shield" class="w-5 h-5 text-white/70 group-hover:text-cyan-400 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Equipment</span>
+                </a>
+                <a href="/missions" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Missions">
+                    <i data-lucide="map" class="w-5 h-5 text-white/70 group-hover:text-emerald-400 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Missions</span>
+                </a>
+                <a href="/arena" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Arena">
+                    <i data-lucide="swords" class="w-5 h-5 text-white/70 group-hover:text-red-400 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Arena</span>
+                </a>
+                <a href="/guilds" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Guilds">
+                    <i data-lucide="users" class="w-5 h-5 text-white/70 group-hover:text-blue-400 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Guilds</span>
+                </a>
+                <a href="/shop" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Shop">
+                    <i data-lucide="shopping-bag" class="w-5 h-5 text-white/70 group-hover:text-yellow-400 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Shop</span>
+                </a>
+                <a href="/achievements" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Achievements">
+                    <i data-lucide="trophy" class="w-5 h-5 text-white/70 group-hover:text-orange-400 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Achievements</span>
+                </a>
                 <?php if (\Core\Session::isModerator()): ?>
-                <a href="/admin" class="text-purple-400 hover:text-purple-300 transition">Admin</a>
+                <a href="/admin" class="nav-item group relative px-3 py-2 rounded-xl hover:bg-white/10 transition-all duration-200" title="Admin">
+                    <i data-lucide="settings" class="w-5 h-5 text-purple-400 group-hover:text-purple-300 transition"></i>
+                    <span class="nav-tooltip absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Admin</span>
+                </a>
                 <?php endif; ?>
             </div>
             
             <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl">
-                    <i data-lucide="user" class="w-4 h-4"></i>
+                <div class="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                    <i data-lucide="user" class="w-4 h-4 text-indigo-400"></i>
                     <span class="font-medium text-sm"><?= htmlspecialchars(\Core\Session::get('username') ?? 'Hero') ?></span>
                 </div>
-                <a href="/logout" class="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-xl text-sm font-semibold transition flex items-center gap-2">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                    Logout
+                <a href="/logout" class="p-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-xl transition flex items-center gap-2 group" title="Logout">
+                    <i data-lucide="log-out" class="w-5 h-5 group-hover:rotate-12 transition-transform"></i>
                 </a>
             </div>
         </div>
@@ -178,21 +207,11 @@ declare(strict_types=1);
     <?php endif; ?>
 
     <?php if ($flash = \Core\Session::getFlash('success')): ?>
-    <div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 glass rounded-2xl px-6 py-4 border border-emerald-500/30 bg-emerald-500/10 fade-in">
-        <div class="flex items-center gap-3">
-            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
-            <span class="text-emerald-400 font-medium"><?= htmlspecialchars($flash) ?></span>
-        </div>
-    </div>
+    <script>document.addEventListener('DOMContentLoaded', function() { showToast('<?= htmlspecialchars($flash, ENT_QUOTES) ?>', 'success'); });</script>
     <?php endif; ?>
 
     <?php if ($flash = \Core\Session::getFlash('error')): ?>
-    <div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 glass rounded-2xl px-6 py-4 border border-red-500/30 bg-red-500/10 fade-in">
-        <div class="flex items-center gap-3">
-            <i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>
-            <span class="text-red-400 font-medium"><?= htmlspecialchars($flash) ?></span>
-        </div>
-    </div>
+    <script>document.addEventListener('DOMContentLoaded', function() { showToast('<?= htmlspecialchars($flash, ENT_QUOTES) ?>', 'error'); });</script>
     <?php endif; ?>
 
     <?= $content ?? '' ?>
@@ -211,6 +230,59 @@ declare(strict_types=1);
             }
         }
         lucide.createIcons();
+        
+        // Global Toast System
+        window.toastQueue = [];
+        window.toastContainer = null;
+        
+        function showToast(message, type = 'info', duration = 4000) {
+            if (!window.toastContainer) {
+                window.toastContainer = document.createElement('div');
+                window.toastContainer.id = 'toast-container';
+                window.toastContainer.className = 'fixed top-24 right-6 z-50 flex flex-col gap-3';
+                document.body.appendChild(window.toastContainer);
+            }
+            
+            const toast = document.createElement('div');
+            const icons = {
+                success: 'check-circle',
+                error: 'alert-circle',
+                warning: 'alert-triangle',
+                info: 'info'
+            };
+            const colors = {
+                success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+                error: 'border-red-500/30 bg-red-500/10 text-red-400',
+                warning: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+                info: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400'
+            };
+            
+            toast.className = `glass rounded-2xl px-6 py-4 border ${colors[type] || colors.info} flex items-center gap-3 shadow-2xl transform translate-x-full opacity-0 transition-all duration-300`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type] || icons.info}" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="font-medium">${message}</span>
+                <button onclick="this.parentElement.remove()" class="ml-2 opacity-60 hover:opacity-100 transition">×</button>
+            `;
+            
+            window.toastContainer.appendChild(toast);
+            lucide.createIcons();
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            });
+            
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+        
+        // Flash messages to toast
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php if ($flash = \Core\Session::getFlash('achievement_unlocked')): ?>
+            showToast('🏆 Achievement Unlocked: <?= htmlspecialchars($flash['name']) ?>!', 'success', 5000);
+            <?php endif; ?>
+        });
     </script>
 </body>
 </html>

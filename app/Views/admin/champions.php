@@ -16,6 +16,7 @@
                 <thead>
                     <tr class="text-left text-white/60 text-sm border-b border-white/10">
                         <th class="p-5 font-medium">ID</th>
+                        <th class="p-5 font-medium">Image</th>
                         <th class="p-5 font-medium">Name</th>
                         <th class="p-5 font-medium">Tier</th>
                         <th class="p-5 font-medium">HP</th>
@@ -30,6 +31,13 @@
                     <?php foreach ($champions as $champion): ?>
                     <tr class="border-b border-white/5 hover:bg-white/5 transition">
                         <td class="p-5 text-white/40">#<?= $champion['id'] ?></td>
+                        <td class="p-5">
+                            <?php if (!empty($champion['image_url'])): ?>
+                                <img src="<?= htmlspecialchars($champion['image_url']) ?>" alt="" class="w-12 h-12 rounded-xl object-cover">
+                            <?php else: ?>
+                                <span class="text-2xl"><?= $champion['icon'] ?? '🛡️' ?></span>
+                            <?php endif; ?>
+                        </td>
                         <td class="p-5 font-semibold"><?= htmlspecialchars($champion['name']) ?></td>
                         <td class="p-5">
                             <span class="tier-<?= $champion['tier'] ?> text-xs px-3 py-1 rounded-full text-white">
@@ -45,11 +53,11 @@
                         </td>
                         <td class="p-5">
                             <div class="flex gap-2">
-                                <button onclick="editChampion(<?= htmlspecialchars(json_encode($champion)) ?>" 
+                                <button onclick='editChampion(<?= json_encode($champion, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)' 
                                         class="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-400 rounded-xl text-sm font-medium transition flex items-center gap-2">
                                     <i data-lucide="edit-2" class="w-4 h-4"></i> Edit
                                 </button>
-                                <button onclick="deleteChampion(<?= $champion['id'] ?>, '<?= htmlspecialchars($champion['name']) ?>')" 
+                                <button onclick="deleteChampion(<?= $champion['id'] ?>, <?= htmlspecialchars(json_encode($champion['name']), ENT_QUOTES, 'UTF-8') ?>)" 
                                         class="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-xl text-sm font-medium transition flex items-center gap-2">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i> Delete
                                 </button>
@@ -83,13 +91,49 @@
             </button>
         </div>
         
-        <form id="championForm" method="POST">
+        <form id="championForm" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?= \Core\Session::csrfToken() ?>">
             <input type="hidden" name="champion_id" id="champion_id">
             
             <div class="mb-5">
                 <label class="block text-sm font-medium text-white/80 mb-2">Name</label>
                 <input type="text" name="name" id="champ_name" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-indigo-500" required>
+            </div>
+            
+            <!-- Image Upload Section -->
+            <div class="mb-5 p-4 bg-white/5 rounded-xl border border-white/10">
+                <label class="block text-sm font-medium text-white/80 mb-3">Champion Image</label>
+                
+                <div class="flex items-start gap-4">
+                    <!-- Preview -->
+                    <div id="image_preview" class="w-24 h-24 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <span id="preview_icon" class="text-4xl">🛡️</span>
+                        <img id="preview_img" src="" alt="" class="w-full h-full object-cover hidden">
+                    </div>
+                    
+                    <div class="flex-1 space-y-3">
+                        <!-- File Upload -->
+                        <label class="block">
+                            <span class="cursor-pointer px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-400 rounded-lg text-sm inline-flex items-center gap-2 transition">
+                                <i data-lucide="upload" class="w-4 h-4"></i> Upload Image
+                            </span>
+                            <input type="file" name="image_file" id="image_file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" onchange="previewImage(this)">
+                        </label>
+                        <p class="text-xs text-white/40">JPG, PNG, WebP, GIF (max 5MB)</p>
+                        
+                        <!-- Or URL -->
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-white/40">or</span>
+                            <input type="text" name="image_url" id="champ_image" class="flex-1 bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="Image URL">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Icon fallback -->
+                <div class="mt-3 flex items-center gap-3">
+                    <label class="text-xs text-white/60">Icon (fallback):</label>
+                    <input type="text" name="icon" id="champ_icon" class="w-20 bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-white text-center text-lg" placeholder="🛡️" maxlength="4" oninput="updatePreviewIcon(this.value)">
+                </div>
             </div>
             
             <div class="mb-5">
@@ -142,10 +186,41 @@
 <script>
 const csrfToken = '<?= \Core\Session::csrfToken() ?>';
 
+function previewImage(input) {
+    const previewImg = document.getElementById('preview_img');
+    const previewIcon = document.getElementById('preview_icon');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewImg.classList.remove('hidden');
+            previewIcon.classList.add('hidden');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function updatePreviewIcon(value) {
+    const previewIcon = document.getElementById('preview_icon');
+    const previewImg = document.getElementById('preview_img');
+    if (value && previewImg.classList.contains('hidden')) {
+        previewIcon.textContent = value;
+    }
+}
+
+function resetPreview() {
+    document.getElementById('preview_img').classList.add('hidden');
+    document.getElementById('preview_img').src = '';
+    document.getElementById('preview_icon').classList.remove('hidden');
+    document.getElementById('preview_icon').textContent = '🛡️';
+}
+
 function showCreateForm() {
     document.getElementById('modalTitle').textContent = 'Create Champion';
     document.getElementById('championForm').reset();
     document.getElementById('champion_id').value = '';
+    resetPreview();
     document.getElementById('championModal').classList.remove('hidden');
     document.getElementById('championModal').classList.add('flex');
     lucide.createIcons();
@@ -162,6 +237,22 @@ function editChampion(champion) {
     document.getElementById('champ_speed').value = champion.base_speed;
     document.getElementById('champ_ability').value = champion.special_ability || '';
     document.getElementById('champ_desc').value = champion.description || '';
+    document.getElementById('champ_image').value = champion.image_url || '';
+    document.getElementById('champ_icon').value = champion.icon || '';
+    
+    // Update preview
+    const previewImg = document.getElementById('preview_img');
+    const previewIcon = document.getElementById('preview_icon');
+    if (champion.image_url) {
+        previewImg.src = champion.image_url;
+        previewImg.classList.remove('hidden');
+        previewIcon.classList.add('hidden');
+    } else {
+        previewImg.classList.add('hidden');
+        previewIcon.classList.remove('hidden');
+        previewIcon.textContent = champion.icon || '🛡️';
+    }
+    
     document.getElementById('championModal').classList.remove('hidden');
     document.getElementById('championModal').classList.add('flex');
     lucide.createIcons();

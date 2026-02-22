@@ -8,9 +8,9 @@ use Core\Model;
 class Lootbox extends Model {
     protected string $table = 'user_lootboxes';
     
-    public function getUserLootboxes(int $userId, bool $openedOnly = false): array {
+    public function getUserLootboxes(int $userId, bool $unopenedOnly = true): array {
         $sql = "SELECT * FROM {$this->table} WHERE user_id = ?";
-        if (!$openedOnly) {
+        if ($unopenedOnly) {
             $sql .= " AND opened = 0";
         }
         $sql .= " ORDER BY acquired_at DESC";
@@ -18,6 +18,42 @@ class Lootbox extends Model {
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$userId]);
         return $stmt->fetchAll();
+    }
+    
+    public function getLootboxCounts(int $userId): array {
+        $stmt = $this->db->prepare("
+            SELECT lootbox_type, COUNT(*) as count 
+            FROM {$this->table} 
+            WHERE user_id = ? AND opened = 0 
+            GROUP BY lootbox_type
+        ");
+        $stmt->execute([$userId]);
+        $results = $stmt->fetchAll();
+        
+        $counts = [
+            'bronze' => 0,
+            'silver' => 0,
+            'gold' => 0,
+            'diamond' => 0,
+            'total' => 0
+        ];
+        
+        foreach ($results as $row) {
+            $counts[$row['lootbox_type']] = (int)$row['count'];
+            $counts['total'] += (int)$row['count'];
+        }
+        
+        return $counts;
+    }
+    
+    public function getLootboxIdsByType(int $userId, string $type, int $limit): array {
+        $stmt = $this->db->prepare("
+            SELECT id FROM {$this->table} 
+            WHERE user_id = ? AND lootbox_type = ? AND opened = 0 
+            LIMIT ?
+        ");
+        $stmt->execute([$userId, $type, $limit]);
+        return array_column($stmt->fetchAll(), 'id');
     }
     
     public function createLootbox(int $userId, string $type = 'bronze'): int {
@@ -35,16 +71,47 @@ class Lootbox extends Model {
             return [];
         }
         
-        // Determine rewards based on lootbox type
         $rewards = $this->generateRewards($lootbox['lootbox_type']);
         
-        // Mark as opened
         $this->update($lootboxId, [
             'opened' => 1,
             'opened_at' => date('Y-m-d H:i:s')
         ]);
         
-        return $rewards;
+        return array_merge($rewards, ['type' => $lootbox['lootbox_type']]);
+    }
+    
+    public function openMultiple(array $lootboxIds): array {
+        $results = [
+            'total_gold' => 0,
+            'total_gems' => 0,
+            'champions_won' => 0,
+            'champions' => [],
+            'opened_count' => 0,
+            'by_type' => []
+        ];
+        
+        foreach ($lootboxIds as $id) {
+            $rewards = $this->openLootbox($id);
+            if (!empty($rewards)) {
+                $results['total_gold'] += $rewards['gold'];
+                $results['total_gems'] += $rewards['gems'];
+                if ($rewards['champion']) {
+                    $results['champions_won']++;
+                }
+                $results['opened_count']++;
+                
+                $type = $rewards['type'];
+                if (!isset($results['by_type'][$type])) {
+                    $results['by_type'][$type] = ['gold' => 0, 'gems' => 0, 'count' => 0];
+                }
+                $results['by_type'][$type]['gold'] += $rewards['gold'];
+                $results['by_type'][$type]['gems'] += $rewards['gems'];
+                $results['by_type'][$type]['count']++;
+            }
+        }
+        
+        return $results;
     }
     
     private function generateRewards(string $type): array {
@@ -60,7 +127,7 @@ class Lootbox extends Model {
         return [
             'gold' => rand(50, 150) * $mult,
             'gems' => rand(5, 20) * $mult,
-            'champion' => rand(1, 100) <= (20 * $mult) // Champion chance
+            'champion' => rand(1, 100) <= (20 * $mult)
         ];
     }
 }

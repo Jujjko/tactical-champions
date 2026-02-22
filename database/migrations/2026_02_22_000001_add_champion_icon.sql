@@ -1,0 +1,1 @@
+ALTER TABLE champions ADD COLUMN icon VARCHAR(10) DEFAULT NULL AFTER image_url;

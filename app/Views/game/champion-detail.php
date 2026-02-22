@@ -9,8 +9,18 @@
             <!-- Left - Visual -->
             <div class="col-span-12 lg:col-span-5">
                 <div class="glass rounded-3xl overflow-hidden neon-glow">
-                    <div class="h-96 bg-gradient-to-br from-violet-900 via-purple-900 to-fuchsia-900 flex items-center justify-center text-[12rem]">
-                        🛡️
+                    <div class="h-96 bg-gradient-to-br from-violet-900 via-purple-900 to-fuchsia-900 flex items-center justify-center relative overflow-hidden">
+                        <?php if (!empty($champion['image_url'])): ?>
+                            <img src="<?= htmlspecialchars($champion['image_url']) ?>" 
+                                 alt="<?= htmlspecialchars($champion['name']) ?>"
+                                 class="w-full h-full object-cover"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="w-full h-full items-center justify-center text-[12rem] hidden">
+                                <?= $champion['icon'] ?? '🛡️' ?>
+                            </div>
+                        <?php else: ?>
+                            <span class="text-[12rem]"><?= $champion['icon'] ?? '🛡️' ?></span>
+                        <?php endif; ?>
                     </div>
                     <div class="p-6 text-center">
                         <!-- Stars Display -->

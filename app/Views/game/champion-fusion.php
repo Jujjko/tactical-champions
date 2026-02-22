@@ -63,12 +63,16 @@
 
         <!-- Fusion Preview -->
         <div class="glass rounded-3xl p-8 mb-8">
-            <div class="flex items-center justify-center gap-8">
+            <div class="flex items-center justify-center gap-8 flex-wrap">
                 <!-- Target Champion -->
                 <div class="text-center">
                     <div class="glass rounded-2xl p-6 w-48">
-                        <div class="h-32 bg-gradient-to-br from-violet-900 to-purple-900 rounded-xl flex items-center justify-center text-5xl mb-3">
-                            🛡️
+                        <div class="h-32 bg-gradient-to-br from-violet-900 to-purple-900 rounded-xl flex items-center justify-center mb-3 overflow-hidden">
+                            <?php if (!empty($champion['image_url'])): ?>
+                                <img src="<?= htmlspecialchars($champion['image_url']) ?>" alt="" class="w-full h-full object-cover">
+                            <?php else: ?>
+                                <span class="text-5xl"><?= $champion['icon'] ?? '🛡️' ?></span>
+                            <?php endif; ?>
                         </div>
                         <div class="font-bold"><?= htmlspecialchars($champion['name']) ?></div>
                         <div class="text-sm text-white/60">Level <?= $champion['level'] ?></div>
@@ -96,8 +100,12 @@
                 <!-- Result Preview -->
                 <div class="text-center">
                     <div class="glass rounded-2xl p-6 w-48 border-2 border-yellow-500/50 neon-glow">
-                        <div class="h-32 bg-gradient-to-br from-yellow-900 to-orange-900 rounded-xl flex items-center justify-center text-5xl mb-3">
-                            🛡️
+                        <div class="h-32 bg-gradient-to-br from-yellow-900 to-orange-900 rounded-xl flex items-center justify-center mb-3 overflow-hidden">
+                            <?php if (!empty($champion['image_url'])): ?>
+                                <img src="<?= htmlspecialchars($champion['image_url']) ?>" alt="" class="w-full h-full object-cover">
+                            <?php else: ?>
+                                <span class="text-5xl"><?= $champion['icon'] ?? '🛡️' ?></span>
+                            <?php endif; ?>
                         </div>
                         <div class="font-bold"><?= htmlspecialchars($champion['name']) ?></div>
                         <div class="text-sm text-white/60">Level <?= $champion['level'] ?></div>
@@ -117,9 +125,15 @@
                      data-id="<?= $candidate['id'] ?>"
                      data-name="<?= htmlspecialchars($candidate['name']) ?>"
                      data-level="<?= $candidate['level'] ?>"
-                     onclick="selectMaterial(<?= $candidate['id'] ?>, '<?= htmlspecialchars($candidate['name']) ?>', <?= $candidate['level'] ?>)">
-                    <div class="h-20 bg-gradient-to-br from-yellow-900/50 to-orange-900/50 rounded-lg flex items-center justify-center text-3xl mb-2">
-                        🛡️
+                     data-icon="<?= htmlspecialchars($candidate['icon'] ?? '🛡️') ?>"
+                     data-image="<?= htmlspecialchars($candidate['image_url'] ?? '') ?>"
+                     onclick="selectMaterial(<?= $candidate['id'] ?>, <?= htmlspecialchars(json_encode($candidate['name'], JSON_UNESCAPED_UNICODE)) ?>, <?= $candidate['level'] ?>, '<?= htmlspecialchars($candidate['icon'] ?? '🛡️') ?>', '<?= htmlspecialchars($candidate['image_url'] ?? '') ?>')">
+                    <div class="h-20 bg-gradient-to-br from-yellow-900/50 to-orange-900/50 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
+                        <?php if (!empty($candidate['image_url'])): ?>
+                            <img src="<?= htmlspecialchars($candidate['image_url']) ?>" alt="" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <span class="text-3xl"><?= $candidate['icon'] ?? '🛡️' ?></span>
+                        <?php endif; ?>
                     </div>
                     <div class="font-semibold text-sm"><?= htmlspecialchars($candidate['name']) ?></div>
                     <div class="text-xs text-white/60">Level <?= $candidate['level'] ?></div>
@@ -161,28 +175,95 @@
     </div>
 </div>
 
+<!-- Fusion Confirmation Modal -->
+<div id="fusionModal" class="modal">
+    <div class="modal-content max-w-md">
+        <div class="text-center">
+            <div class="text-6xl mb-4">⚔️</div>
+            <h2 class="text-2xl font-bold mb-2">Confirm Fusion</h2>
+            <p class="text-white/60 mb-6">The material champion will be permanently consumed. This action cannot be undone.</p>
+            
+            <div class="glass rounded-2xl p-4 mb-6 flex items-center justify-center gap-4">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-900/50 to-orange-900/50 rounded-xl flex items-center justify-center mb-1 overflow-hidden" id="modalMaterialImage">
+                        <span class="text-3xl">🛡️</span>
+                    </div>
+                    <div class="text-sm font-semibold" id="modalMaterialName">-</div>
+                    <div class="text-xs text-red-400">Will be lost</div>
+                </div>
+                <div class="text-2xl text-yellow-400">+</div>
+                <div class="text-center">
+                    <div class="w-16 h-16 rounded-xl flex items-center justify-center mb-1 overflow-hidden">
+                        <?php if (!empty($champion['image_url'])): ?>
+                            <img src="<?= htmlspecialchars($champion['image_url']) ?>" alt="" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <span class="text-3xl"><?= $champion['icon'] ?? '🛡️' ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="text-sm font-semibold"><?= htmlspecialchars($champion['name']) ?></div>
+                    <div class="text-xs text-emerald-400">Becomes stronger</div>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="closeFusionModal()" 
+                    class="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition">
+                    Cancel
+                </button>
+                <button id="confirmFusionBtn" onclick="executeFusion()"
+                    class="flex-1 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 rounded-xl font-semibold transition">
+                    Confirm Fusion
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+#fusionModal .modal-content {
+    animation: fusionModalIn 0.3s ease-out;
+}
+@keyframes fusionModalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+</style>
+
 <script>
 let selectedMaterialId = null;
+let selectedMaterialName = null;
 
-function selectMaterial(id, name, level) {
+function selectMaterial(id, name, level, icon, imageUrl) {
     selectedMaterialId = id;
+    selectedMaterialName = name;
     
     document.querySelectorAll('.candidate-card').forEach(card => {
         card.classList.remove('ring-2', 'ring-yellow-500');
     });
     
-    const selectedCard = document.querySelector(`.candidate-card[data-id="${id}"]`);
+    const selectedCard = document.querySelector('.candidate-card[data-id="' + id + '"]');
     if (selectedCard) {
         selectedCard.classList.add('ring-2', 'ring-yellow-500');
     }
     
+    let imageHtml = '';
+    if (imageUrl) {
+        imageHtml = '<img src="' + imageUrl + '" alt="" class="w-full h-full object-cover">';
+    } else {
+        imageHtml = '<span class="text-5xl">' + (icon || '🛡️') + '</span>';
+    }
+    
     const preview = document.getElementById('materialPreview');
-    preview.innerHTML = `
-        <div class="h-32 bg-gradient-to-br from-yellow-900 to-orange-900 rounded-xl flex items-center justify-center text-5xl mb-3">🛡️</div>
-        <div class="font-bold">${name}</div>
-        <div class="text-sm text-white/60">Level ${level}</div>
-        <div class="text-yellow-400 text-sm mt-1">Will be consumed</div>
-    `;
+    preview.innerHTML = '<div class="h-32 bg-gradient-to-br from-yellow-900 to-orange-900 rounded-xl flex items-center justify-center mb-3 overflow-hidden">' + imageHtml + '</div>' +
+        '<div class="font-bold">' + name + '</div>' +
+        '<div class="text-sm text-white/60">Level ' + level + '</div>' +
+        '<div class="text-yellow-400 text-sm mt-1">Will be consumed</div>';
     
     const btn = document.getElementById('fusionBtn');
     btn.disabled = false;
@@ -192,7 +273,22 @@ function selectMaterial(id, name, level) {
 function performFusion() {
     if (!selectedMaterialId) return;
     
-    if (!confirm('Are you sure? The material champion will be permanently consumed.')) return;
+    document.getElementById('modalMaterialName').textContent = selectedMaterialName;
+    document.getElementById('fusionModal').classList.add('active');
+}
+
+function closeFusionModal() {
+    document.getElementById('fusionModal').classList.remove('active');
+}
+
+function executeFusion() {
+    if (!selectedMaterialId) return;
+    
+    closeFusionModal();
+    
+    const btn = document.getElementById('fusionBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="animate-pulse">Fusing...</span>';
     
     const csrf = document.getElementById('csrf_token').value;
     const targetId = document.getElementById('target_id').value;
@@ -205,14 +301,26 @@ function performFusion() {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            showToast(`Fusion successful! Champion is now ${data.data.new_stars}⭐!`, 'success');
+            showToast(`Fusion successful! Champion is now ${data.new_stars}⭐!`, 'success');
             setTimeout(() => window.location.href = `/champions/${targetId}`, 1500);
         } else {
+            btn.disabled = false;
+            btn.innerHTML = 'Perform Fusion';
             showToast(data.error || 'Fusion failed', 'error');
         }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = 'Perform Fusion';
+        showToast('An error occurred: ' + err.message, 'error');
     });
 }
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeFusionModal();
+});
 </script>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';
+?>

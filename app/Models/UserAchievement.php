@@ -4,39 +4,49 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Core\Model;
+use App\Models\Achievement;
 
 class UserAchievement extends Model {
     protected string $table = 'user_achievements';
     
     public function updateProgress(int $userId, int $achievementId, int $progress): bool {
-        $existing = $this->db->prepare("
+        $stmt = $this->db->prepare("
             SELECT * FROM {$this->table} WHERE user_id = ? AND achievement_id = ?
         ");
-        $existing->execute([$userId, $achievementId]);
-        $record = $existing->fetch();
+        $stmt->execute([$userId, $achievementId]);
+        $existing = $stmt->fetch();
         
         $achievementModel = new Achievement();
         $achievement = $achievementModel->findById($achievementId);
         
-        if (!$achievement) return false;
+        if (!$achievement) {
+            return false;
+        }
         
         $completed = $progress >= $achievement['requirement_value'];
         
-        if ($record) {
-            if ($progress <= $record['progress']) return true;
+        if ($existing) {
+            if ($progress <= ($existing['progress'] ?? 0)) {
+                return true;
+            }
             
-            return $this->update($record['id'], [
+            $updateData = [
                 'progress' => $progress,
-                'completed' => $completed,
-                'completed_at' => $completed ? date('Y-m-d H:i:s') : null
-            ]);
+                'completed' => $completed ? 1 : 0
+            ];
+            
+            if ($completed && empty($existing['completed_at'])) {
+                $updateData['completed_at'] = date('Y-m-d H:i:s');
+            }
+            
+            return $this->update((int)$existing['id'], $updateData);
         }
         
         $this->create([
             'user_id' => $userId,
             'achievement_id' => $achievementId,
             'progress' => $progress,
-            'completed' => $completed,
+            'completed' => $completed ? 1 : 0,
             'completed_at' => $completed ? date('Y-m-d H:i:s') : null
         ]);
         
@@ -53,11 +63,17 @@ class UserAchievement extends Model {
         $stmt->execute([$userId, $achievementId]);
         $record = $stmt->fetch();
         
-        if (!$record) return false;
+        if (!$record) {
+            return false;
+        }
         
         $resourceModel = new Resource();
-        $resourceModel->addGold($userId, $record['reward_gold']);
-        $resourceModel->addGems($userId, $record['reward_gems']);
+        if ($record['reward_gold'] > 0) {
+            $resourceModel->addGold($userId, (int)$record['reward_gold']);
+        }
+        if ($record['reward_gems'] > 0) {
+            $resourceModel->addGems($userId, (int)$record['reward_gems']);
+        }
         
         return true;
     }

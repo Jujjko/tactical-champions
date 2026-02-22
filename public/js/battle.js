@@ -76,12 +76,21 @@ function renderTeams() {
 function createChampionCard(champ, isPlayer) {
     const healthPercent = Math.max(0, (champ.current_health / champ.max_health) * 100);
     const status = champ.stunned ? '💫' : (champ.frozen ? '❄️' : '');
+    const icon = champ.icon || '🛡️';
+    const imageUrl = champ.image_url || '';
+
+    let imageHtml = '';
+    if (imageUrl) {
+        imageHtml = '<img src="' + imageUrl + '" alt="" class="w-full h-full object-cover" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><span class="text-7xl hidden items-center justify-center">' + icon + '</span>';
+    } else {
+        imageHtml = '<span class="text-7xl">' + icon + '</span>';
+    }
 
     return `
         <div class="battle-champion glass rounded-3xl p-5 cursor-pointer transition-all hover:scale-105 ${!champ.alive ? 'opacity-40 pointer-events-none' : ''}" 
              data-id="${champ.id}" data-team="${isPlayer ? 'player' : 'enemy'}">
-            <div class="relative h-28 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl flex items-center justify-center text-7xl mb-4 overflow-hidden">
-                🛡️
+            <div class="relative h-28 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl flex items-center justify-center mb-4 overflow-hidden">
+                ${imageHtml}
                 ${status ? `<div class="absolute top-3 right-3 text-4xl">${status}</div>` : ''}
             </div>
             <div class="font-semibold text-center mb-3">${champ.name}</div>

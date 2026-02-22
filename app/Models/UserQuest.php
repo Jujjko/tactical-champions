@@ -158,4 +158,15 @@ class UserQuest extends Model {
         $stmt->execute([$userId]);
         return (int)$stmt->fetchColumn();
     }
+    
+    public function getUnclaimedQuests(int $userId): array {
+        $stmt = $this->db->prepare("
+            SELECT uq.id
+            FROM {$this->table} uq
+            JOIN quests q ON uq.quest_id = q.id
+            WHERE uq.user_id = ? AND uq.completed = TRUE AND uq.claimed = FALSE
+        ");
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    }
 }
