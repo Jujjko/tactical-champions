@@ -62,4 +62,15 @@ class User extends Model {
             'password_hash' => password_hash($newPassword, PASSWORD_BCRYPT)
         ]);
     }
+    
+    public function searchByName(string $query, int $excludeUserId, int $limit = 20): array {
+        $stmt = $this->db->prepare("
+            SELECT id, username, level
+            FROM {$this->table}
+            WHERE username LIKE ? AND id != ? AND deleted_at IS NULL
+            LIMIT ?
+        ");
+        $stmt->execute(["%{$query}%", $excludeUserId, $limit]);
+        return $stmt->fetchAll();
+    }
 }

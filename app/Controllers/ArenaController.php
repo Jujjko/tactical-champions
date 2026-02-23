@@ -13,21 +13,30 @@ use App\Models\ArenaQueue;
 use App\Helpers\RankHelper;
 
 class ArenaController extends Controller {
+    private PvpRating $pvpRatingModel;
+    private PvpChallenge $pvpChallengeModel;
+    private UserChampion $userChampionModel;
+    private User $userModel;
+    private ArenaQueue $arenaQueueModel;
+    
+    public function __construct() {
+        $this->pvpRatingModel = new PvpRating();
+        $this->pvpChallengeModel = new PvpChallenge();
+        $this->userChampionModel = new UserChampion();
+        $this->userModel = new User();
+        $this->arenaQueueModel = new ArenaQueue();
+    }
+    
     public function index(): void {
         $userId = Session::userId();
         
-        $pvpRatingModel = new PvpRating();
-        $pvpChallengeModel = new PvpChallenge();
-        $userChampionModel = new UserChampion();
-        $arenaQueueModel = new ArenaQueue();
-        
-        $rating = $pvpRatingModel->getOrCreateForUser($userId);
-        $pendingChallenges = $pvpChallengeModel->getPendingChallenges($userId);
-        $sentChallenges = $pvpChallengeModel->getSentChallenges($userId);
-        $champions = $userChampionModel->getUserChampions($userId);
-        $leaderboard = $pvpRatingModel->getLeaderboard(10);
-        $queueEntry = $arenaQueueModel->getQueueEntry($userId);
-        $queueCount = $arenaQueueModel->getQueueCount();
+        $rating = $this->pvpRatingModel->getOrCreateForUser($userId);
+        $pendingChallenges = $this->pvpChallengeModel->getPendingChallenges($userId);
+        $sentChallenges = $this->pvpChallengeModel->getSentChallenges($userId);
+        $champions = $this->userChampionModel->getUserChampions($userId);
+        $leaderboard = $this->pvpRatingModel->getLeaderboard(10);
+        $queueEntry = $this->arenaQueueModel->getQueueEntry($userId);
+        $queueCount = $this->arenaQueueModel->getQueueCount();
         $rankInfo = RankHelper::getRank((int)$rating['rating']);
         
         $this->view('game/arena', [
@@ -43,11 +52,10 @@ class ArenaController extends Controller {
     }
     
     public function leaderboard(): void {
-        $pvpRatingModel = new PvpRating();
         $page = (int)($_GET['page'] ?? 1);
         $limit = 50;
         
-        $leaderboard = $pvpRatingModel->getLeaderboard($limit);
+        $leaderboard = $this->pvpRatingModel->getLeaderboard($limit);
         
         $this->view('game/arena-leaderboard', [
             'leaderboard' => $leaderboard,
@@ -76,24 +84,21 @@ class ArenaController extends Controller {
             return;
         }
         
-        $userChampionModel = new UserChampion();
-        $champion = $userChampionModel->findById($championId);
+        $champion = $this->userChampionModel->findById($championId);
         
         if (!$champion || $champion['user_id'] !== $userId) {
             $this->jsonError('Champion not found', 404);
             return;
         }
         
-        $userModel = new User();
-        $defender = $userModel->findById($defenderId);
+        $defender = $this->userModel->findById($defenderId);
         
         if (!$defender) {
             $this->jsonError('Player not found', 404);
             return;
         }
         
-        $pvpChallengeModel = new PvpChallenge();
-        $challengeId = $pvpChallengeModel->createChallenge($userId, $championId, $defenderId);
+        $challengeId = $this->pvpChallengeModel->createChallenge($userId, $championId, $defenderId);
         
         $this->jsonSuccess(['challenge_id' => $challengeId, 'message' => 'Challenge sent!']);
     }
@@ -114,8 +119,7 @@ class ArenaController extends Controller {
             return;
         }
         
-        $pvpChallengeModel = new PvpChallenge();
-        $challenge = $pvpChallengeModel->findById($challengeId);
+        $challenge = $this->pvpChallengeModel->findById($challengeId);
         
         if (!$challenge || $challenge['defender_id'] !== $userId) {
             $this->jsonError('Challenge not found', 404);
@@ -127,7 +131,7 @@ class ArenaController extends Controller {
             return;
         }
         
-        $pvpChallengeModel->acceptChallenge($challengeId, $championId);
+        $this->pvpChallengeModel->acceptChallenge($challengeId, $championId);
         
         $this->jsonSuccess(['message' => 'Challenge accepted! Prepare for battle!']);
     }
@@ -141,21 +145,19 @@ class ArenaController extends Controller {
             return;
         }
         
-        $pvpChallengeModel = new PvpChallenge();
-        $challenge = $pvpChallengeModel->findById($challengeId);
+        $challenge = $this->pvpChallengeModel->findById($challengeId);
         
         if (!$challenge || $challenge['defender_id'] !== $userId) {
             $this->jsonError('Challenge not found', 404);
             return;
         }
         
-        $pvpChallengeModel->declineChallenge($challengeId);
+        $this->pvpChallengeModel->declineChallenge($challengeId);
         
         $this->jsonSuccess(['message' => 'Challenge declined']);
     }
     
-    public function joinQueue(): void
-    {
+    public function joinQueue(): void {
         $userId = Session::userId();
         
         if (!$this->validateCsrf()) {
@@ -170,28 +172,24 @@ class ArenaController extends Controller {
             return;
         }
         
-        $userChampionModel = new UserChampion();
-        $champion = $userChampionModel->findById($championId);
+        $champion = $this->userChampionModel->findById($championId);
         
         if (!$champion || $champion['user_id'] !== $userId) {
             $this->jsonError('Champion not found', 404);
             return;
         }
         
-        $pvpRatingModel = new PvpRating();
-        $rating = $pvpRatingModel->getOrCreateForUser($userId);
+        $rating = $this->pvpRatingModel->getOrCreateForUser($userId);
         
-        $arenaQueueModel = new ArenaQueue();
-        $arenaQueueModel->joinQueue($userId, $championId, (int)$rating['rating']);
+        $this->arenaQueueModel->joinQueue($userId, $championId, (int)$rating['rating']);
         
         $this->jsonSuccess([
             'message' => 'Joined matchmaking queue',
-            'position' => $arenaQueueModel->getQueuePosition($userId),
+            'position' => $this->arenaQueueModel->getQueuePosition($userId),
         ]);
     }
     
-    public function leaveQueue(): void
-    {
+    public function leaveQueue(): void {
         $userId = Session::userId();
         
         if (!$this->validateCsrf()) {
@@ -199,45 +197,40 @@ class ArenaController extends Controller {
             return;
         }
         
-        $arenaQueueModel = new ArenaQueue();
-        $arenaQueueModel->leaveQueue($userId);
+        $this->arenaQueueModel->leaveQueue($userId);
         
         $this->jsonSuccess(['message' => 'Left matchmaking queue']);
     }
     
-    public function checkMatch(): void
-    {
+    public function checkMatch(): void {
         $userId = Session::userId();
         
-        $arenaQueueModel = new ArenaQueue();
-        $queueEntry = $arenaQueueModel->getQueueEntry($userId);
+        $queueEntry = $this->arenaQueueModel->getQueueEntry($userId);
         
         if (!$queueEntry) {
             $this->jsonSuccess(['status' => 'not_in_queue']);
             return;
         }
         
-        $pvpRatingModel = new PvpRating();
-        $rating = $pvpRatingModel->getOrCreateForUser($userId);
+        $rating = $this->pvpRatingModel->getOrCreateForUser($userId);
         
-        $match = $arenaQueueModel->findMatch($userId, (int)$rating['rating'], 150);
+        $match = $this->arenaQueueModel->findMatch($userId, (int)$rating['rating'], 150);
         
         if (!$match) {
-            $match = $arenaQueueModel->expandSearch($userId, (int)$rating['rating'], 300);
+            $match = $this->arenaQueueModel->expandSearch($userId, (int)$rating['rating'], 300);
         }
         
         if ($match) {
-            $arenaQueueModel->leaveQueue($userId);
-            $arenaQueueModel->leaveQueue($match['user_id']);
+            $this->arenaQueueModel->leaveQueue($userId);
+            $this->arenaQueueModel->leaveQueue($match['user_id']);
             
-            $pvpChallengeModel = new PvpChallenge();
-            $challengeId = $pvpChallengeModel->createChallenge(
+            $challengeId = $this->pvpChallengeModel->createChallenge(
                 $userId,
                 $queueEntry['champion_id'],
                 $match['user_id'],
                 150
             );
-            $pvpChallengeModel->acceptChallenge($challengeId, $match['champion_id']);
+            $this->pvpChallengeModel->acceptChallenge($challengeId, $match['champion_id']);
             
             $opponentRank = RankHelper::getRank((int)($match['rating'] ?? 1000));
             
@@ -255,8 +248,8 @@ class ArenaController extends Controller {
             return;
         }
         
-        $position = $arenaQueueModel->getQueuePosition($userId);
-        $queueCount = $arenaQueueModel->getQueueCount();
+        $position = $this->arenaQueueModel->getQueuePosition($userId);
+        $queueCount = $this->arenaQueueModel->getQueueCount();
         $waitTime = time() - strtotime($queueEntry['created_at']);
         
         $this->jsonSuccess([

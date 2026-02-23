@@ -9,17 +9,18 @@ use App\Models\PvpSeason;
 use App\Models\SeasonReward;
 use App\Services\SeasonService;
 
-class SeasonController extends Controller
-{
+class SeasonController extends Controller {
     private SeasonService $seasonService;
+    private PvpSeason $pvpSeasonModel;
+    private SeasonReward $seasonRewardModel;
     
-    public function __construct()
-    {
+    public function __construct() {
         $this->seasonService = new SeasonService();
+        $this->pvpSeasonModel = new PvpSeason();
+        $this->seasonRewardModel = new SeasonReward();
     }
     
-    public function index(): void
-    {
+    public function index(): void {
         $userId = Session::userId();
         
         $activeSeason = $this->seasonService->getActiveSeason();
@@ -35,8 +36,7 @@ class SeasonController extends Controller
         ]);
     }
     
-    public function claimReward(string $id): void
-    {
+    public function claimReward(string $id): void {
         $userId = Session::userId();
         $rewardId = (int)$id;
         

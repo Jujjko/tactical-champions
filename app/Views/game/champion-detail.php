@@ -111,6 +111,66 @@
                     </div>
                 </div>
                 <?php endif; ?>
+                
+                <!-- Shard Progress / Ascension -->
+                <div class="glass rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-indigo-400 font-semibold flex items-center gap-3">
+                            <span class="text-3xl">💠</span> SHARD PROGRESS
+                        </div>
+                        <div class="text-sm px-3 py-1 rounded-full <?= $ascensionInfo['star_tier'] === 'gold' ? 'bg-yellow-500/20 text-yellow-400' : ($ascensionInfo['star_tier'] === 'red' ? 'bg-red-500/20 text-red-400' : ($ascensionInfo['star_tier'] === 'blue' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/10 text-white/60')) ?>">
+                            <?= ucfirst($ascensionInfo['star_tier'] ?? 'white') ?> Tier
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="flex-1">
+                            <div class="h-6 bg-white/10 rounded-full overflow-hidden">
+                                <?php 
+                                $progress = 0;
+                                if (!empty($ascensionInfo['required_shards']) && $ascensionInfo['required_shards'] > 0) {
+                                    $progress = min(($ascensionInfo['current_shards'] / $ascensionInfo['required_shards']) * 100, 100);
+                                }
+                                ?>
+                                <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500" 
+                                     style="width: <?= $progress ?>%"></div>
+                            </div>
+                        </div>
+                        <div class="text-xl font-mono font-bold">
+                            <?= $ascensionInfo['current_shards'] ?>/<?= $ascensionInfo['required_shards'] ?>
+                        </div>
+                    </div>
+                    
+                    <?php if ($ascensionInfo['is_maxed']): ?>
+                        <div class="text-center py-4 bg-yellow-500/20 rounded-xl border border-yellow-500/30">
+                            <div class="text-2xl font-bold text-yellow-400">MAX LEVEL REACHED</div>
+                            <div class="text-sm text-white/60">Gold 5★ - Maximum Power!</div>
+                        </div>
+                    <?php elseif ($ascensionInfo['can_tier_up']): ?>
+                        <button onclick="tierUpChampion(<?= $champion['id'] ?>)" 
+                                class="w-full py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-lg font-bold rounded-xl transition transform hover:scale-[1.02]">
+                            TIER UP TO <?= strtoupper($ascensionInfo['next_tier']) ?>
+                        </button>
+                    <?php elseif ($ascensionInfo['can_ascend']): ?>
+                        <button onclick="ascendChampion(<?= $champion['id'] ?>)" 
+                                class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-lg font-bold rounded-xl transition transform hover:scale-[1.02]">
+                            ASCEND TO <?= $champion['stars'] + 1 ?>★
+                        </button>
+                    <?php else: ?>
+                        <div class="text-center py-3 bg-white/5 rounded-xl">
+                            <div class="text-sm text-white/60">
+                                Need <?= $ascensionInfo['required_shards'] - $ascensionInfo['current_shards'] ?> more shards to ascend
+                            </div>
+                            <a href="/shop" class="inline-block mt-2 text-amber-400 hover:text-amber-300 text-sm">
+                                Get more shards →
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="mt-4 text-center text-xs text-white/40">
+                        Total Level: <?= $ascensionInfo['total_level'] ?>/20 | Tier Multiplier: <?= $ascensionInfo['tier_multiplier'] ?>x
+                    </div>
+                </div>
 
                 <!-- Power Rating -->
                 <div class="glass rounded-2xl p-6 text-center">
@@ -182,6 +242,48 @@
         </div>
     </div>
 </div>
+
+<script>
+function ascendChampion(userChampionId) {
+    fetch(`/champions/${userChampionId}/ascend`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Champion ascended successfully!');
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to ascend champion');
+        }
+    })
+    .catch(() => alert('An error occurred'));
+}
+
+function tierUpChampion(userChampionId) {
+    fetch(`/champions/${userChampionId}/tier-up`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Champion tier increased!');
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to tier up champion');
+        }
+    })
+    .catch(() => alert('An error occurred'));
+}
+</script>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';

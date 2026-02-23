@@ -7,7 +7,6 @@ use Core\Controller;
 use Core\Session;
 use App\Services\TournamentService;
 use App\Models\Tournament;
-use App\Models\Resource;
 
 class TournamentController extends Controller {
     private TournamentService $tournamentService;
@@ -39,7 +38,7 @@ class TournamentController extends Controller {
         ]);
     }
     
-    public function view(int $id): void {
+    public function show(int $id): void {
         if (!Session::isLoggedIn()) {
             $this->redirect('/login');
         }
@@ -122,7 +121,6 @@ class TournamentController extends Controller {
             $this->redirect('/login');
         }
         
-        $userId = Session::userId();
         $tournament = $this->tournamentModel->findById($tournamentId);
         
         if (!$tournament || $tournament['status'] !== 'ongoing') {

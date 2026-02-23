@@ -11,9 +11,15 @@ use App\Models\UserChampion;
 use App\Services\QuestService;
 
 class EquipmentController extends Controller {
+    private UserEquipment $userEquipmentModel;
+    private Equipment $equipmentModel;
+    private UserChampion $userChampionModel;
     private QuestService $questService;
     
     public function __construct() {
+        $this->userEquipmentModel = new UserEquipment();
+        $this->equipmentModel = new Equipment();
+        $this->userChampionModel = new UserChampion();
         $this->questService = new QuestService();
     }
     
@@ -21,10 +27,8 @@ class EquipmentController extends Controller {
         $userId = Session::userId();
         $typeFilter = $_GET['type'] ?? null;
         
-        $userEquipmentModel = new UserEquipment();
-        
         $this->view('game/equipment', [
-            'equipment' => $userEquipmentModel->getUserEquipment($userId),
+            'equipment' => $this->userEquipmentModel->getUserEquipment($userId),
             'typeFilter' => $typeFilter
         ]);
     }
@@ -33,19 +37,15 @@ class EquipmentController extends Controller {
         $userId = Session::userId();
         $userEquipmentId = (int)$id;
         
-        $userEquipmentModel = new UserEquipment();
-        $equipment = $userEquipmentModel->findById($userEquipmentId);
+        $equipment = $this->userEquipmentModel->findById($userEquipmentId);
         
         if (!$equipment || $equipment['user_id'] !== $userId) {
             $this->redirectWithError('/equipment', 'Equipment not found');
             return;
         }
         
-        $equipmentModel = new Equipment();
-        $equipmentDetails = $equipmentModel->findById($equipment['equipment_id']);
-        
-        $userChampionModel = new UserChampion();
-        $champions = $userChampionModel->getUserChampions($userId);
+        $equipmentDetails = $this->equipmentModel->findById($equipment['equipment_id']);
+        $champions = $this->userChampionModel->getUserChampions($userId);
         
         $this->view('game/equipment-detail', [
             'userEquipment' => $equipment,
@@ -70,8 +70,7 @@ class EquipmentController extends Controller {
             return;
         }
         
-        $userEquipmentModel = new UserEquipment();
-        $result = $userEquipmentModel->equipToChampion($userEquipmentId, $championId, $userId);
+        $result = $this->userEquipmentModel->equipToChampion($userEquipmentId, $championId, $userId);
         
         if ($result) {
             $this->questService->trackEquipmentChange($userId);
@@ -90,8 +89,7 @@ class EquipmentController extends Controller {
             return;
         }
         
-        $userEquipmentModel = new UserEquipment();
-        $result = $userEquipmentModel->unequip($userEquipmentId, $userId);
+        $result = $this->userEquipmentModel->unequip($userEquipmentId, $userId);
         
         if ($result) {
             $this->questService->trackEquipmentChange($userId);

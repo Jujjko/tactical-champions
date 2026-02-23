@@ -16,21 +16,23 @@ use App\Services\PlayerSetupService;
 
 class AuthController extends Controller {
     private User $userModel;
-    private RateLimiter $rateLimiter;
     private PasswordResetToken $tokenModel;
+    private RateLimiter $rateLimiter;
     private DailyLoginService $dailyLoginService;
     private AuditService $auditService;
     private MailService $mailService;
     private PlayerSetupService $playerSetupService;
+    private Validator $validator;
     
     public function __construct() {
         $this->userModel = new User();
-        $this->rateLimiter = new RateLimiter(5, 900);
         $this->tokenModel = new PasswordResetToken();
+        $this->rateLimiter = new RateLimiter(5, 900);
         $this->dailyLoginService = new DailyLoginService();
         $this->auditService = new AuditService();
         $this->mailService = new MailService();
         $this->playerSetupService = new PlayerSetupService();
+        $this->validator = new Validator();
     }
     
     public function showLogin(): void {
@@ -89,8 +91,7 @@ class AuthController extends Controller {
             return;
         }
         
-        $validator = new Validator();
-        $isValid = $validator->validate($_POST, [
+        $isValid = $this->validator->validate($_POST, [
             'email' => 'required|email'
         ]);
         
@@ -123,8 +124,7 @@ class AuthController extends Controller {
             return;
         }
         
-        $validator = new Validator();
-        $isValid = $validator->validate($_POST, [
+        $isValid = $this->validator->validate($_POST, [
             'token' => 'required',
             'password' => 'required|min:8',
             'confirm_password' => 'required'
@@ -175,8 +175,7 @@ class AuthController extends Controller {
             return;
         }
         
-        $validator = new Validator();
-        $isValid = $validator->validate($_POST, [
+        $isValid = $this->validator->validate($_POST, [
             'username' => 'required',
             'password' => 'required'
         ]);
@@ -245,8 +244,7 @@ class AuthController extends Controller {
             return;
         }
         
-        $validator = new Validator();
-        $isValid = $validator->validate($_POST, [
+        $isValid = $this->validator->validate($_POST, [
             'username' => 'required|min:3|max:50|alphanumeric|unique:users,username',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:8',
@@ -255,7 +253,7 @@ class AuthController extends Controller {
         
         if (!$isValid) {
             $this->rateLimiter->hit($ipKey);
-            Session::flash('error', $validator->firstError('username') ?? $validator->firstError('email') ?? 'Please check your input');
+            Session::flash('error', $this->validator->firstError('username') ?? $this->validator->firstError('email') ?? 'Please check your input');
             $this->redirect('/register');
             return;
         }

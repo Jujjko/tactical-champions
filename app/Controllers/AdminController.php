@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use Core\Controller;
 use Core\Session;
+use Core\Database;
 use App\Models\User;
 use App\Models\Champion;
 use App\Models\Mission;
@@ -12,37 +13,59 @@ use App\Models\Battle;
 use App\Models\Equipment;
 use App\Models\PvpBattle;
 use App\Models\Resource;
+use App\Models\Tournament;
 use App\Services\AuditService;
 use App\Services\AnalyticsService;
 use App\Services\Logger;
 use App\Services\SeasonService;
+use App\Services\TournamentService;
+use App\Services\ImageUploadService;
 
 class AdminController extends Controller {
     private AuditService $auditService;
+    private AnalyticsService $analyticsService;
+    private Logger $logger;
+    private SeasonService $seasonService;
+    private User $userModel;
+    private Champion $championModel;
+    private Mission $missionModel;
+    private Battle $battleModel;
+    private Equipment $equipmentModel;
+    private PvpBattle $pvpBattleModel;
+    private Resource $resourceModel;
+    private Tournament $tournamentModel;
+    private ImageUploadService $imageUploadService;
     
     public function __construct() {
         $this->auditService = new AuditService();
+        $this->analyticsService = new AnalyticsService();
+        $this->logger = new Logger();
+        $this->seasonService = new SeasonService();
+        $this->userModel = new User();
+        $this->championModel = new Champion();
+        $this->missionModel = new Mission();
+        $this->battleModel = new Battle();
+        $this->equipmentModel = new Equipment();
+        $this->pvpBattleModel = new PvpBattle();
+        $this->resourceModel = new Resource();
+        $this->tournamentModel = new Tournament();
+        $this->imageUploadService = new ImageUploadService();
     }
     
     public function dashboard(): void {
-        $userModel = new User();
-        $battleModel = new Battle();
-        $auditService = new AuditService();
-        
         $leaderboard = $this->getLeaderboard(10);
         
         $this->view('admin/dashboard', [
-            'totalUsers' => $userModel->count(),
-            'totalBattles' => $battleModel->count(),
-            'recentLogs' => $auditService->getRecentLogs(20),
+            'totalUsers' => $this->userModel->count(),
+            'totalBattles' => $this->battleModel->count(),
+            'recentLogs' => $this->auditService->getRecentLogs(20),
             'leaderboard' => $leaderboard
         ]);
     }
     
     public function users(): void {
         $page = (int)($_GET['page'] ?? 1);
-        $userModel = new User();
-        $result = $userModel->paginate($page, 20, 'id', 'DESC');
+        $result = $this->userModel->paginate($page, 20, 'id', 'DESC');
         
         $this->view('admin/users', [
             'users' => $result['items'],
@@ -65,8 +88,7 @@ class AdminController extends Controller {
             return;
         }
         
-        $userModel = new User();
-        $user = $userModel->findById((int)$id);
+        $user = $this->userModel->findById((int)$id);
         
         if (!$user) {
             $this->jsonError('User not found', 404);
@@ -74,7 +96,7 @@ class AdminController extends Controller {
         }
         
         $oldValue = (bool)$user['is_active'];
-        $userModel->update((int)$id, [
+        $this->userModel->update((int)$id, [
             'is_active' => !$user['is_active']
         ]);
         
@@ -85,8 +107,7 @@ class AdminController extends Controller {
     
     public function champions(): void {
         $page = (int)($_GET['page'] ?? 1);
-        $championModel = new Champion();
-        $result = $championModel->paginate($page, 20, 'tier', 'DESC');
+        $result = $this->championModel->paginate($page, 20, 'tier', 'DESC');
         
         $this->view('admin/champions', [
             'champions' => $result['items'],
@@ -104,8 +125,7 @@ class AdminController extends Controller {
             return;
         }
         
-        $championModel = new Champion();
-        $champion = $championModel->findById((int)$id);
+        $champion = $this->championModel->findById((int)$id);
         
         if (!$champion) {
             $this->jsonError('Champion not found', 404);
@@ -143,14 +163,12 @@ class AdminController extends Controller {
         $imageUrl = htmlspecialchars($_POST['image_url'] ?? '');
         
         if (!empty($_FILES['image_file']['name'])) {
-            $imageService = new \App\Services\ImageUploadService();
-            $uploadedUrl = $imageService->upload($_FILES['image_file'], 'champion');
+            $uploadedUrl = $this->imageUploadService->upload($_FILES['image_file'], 'champion');
             if ($uploadedUrl) {
                 $imageUrl = $uploadedUrl;
             }
         }
         
-        $championModel = new Champion();
         $data = [
             'name' => htmlspecialchars($_POST['name']),
             'tier' => $_POST['tier'],
@@ -164,7 +182,7 @@ class AdminController extends Controller {
             'icon' => htmlspecialchars($_POST['icon'] ?? '')
         ];
         
-        $championId = $championModel->create($data);
+        $championId = $this->championModel->create($data);
         
         $this->auditService->logCreate('champion', $championId, $data);
         
@@ -182,8 +200,7 @@ class AdminController extends Controller {
             return;
         }
         
-        $championModel = new Champion();
-        $oldChampion = $championModel->findById((int)$id);
+        $oldChampion = $this->championModel->findById((int)$id);
         
         if (!$oldChampion) {
             $this->jsonError('Champion not found', 404);
@@ -200,11 +217,10 @@ class AdminController extends Controller {
         }
         
         if (!empty($_FILES['image_file']['name'])) {
-            $imageService = new \App\Services\ImageUploadService();
-            $uploadedUrl = $imageService->upload($_FILES['image_file'], 'champion');
+            $uploadedUrl = $this->imageUploadService->upload($_FILES['image_file'], 'champion');
             if ($uploadedUrl) {
                 if (!empty($oldChampion['image_url']) && str_starts_with($oldChampion['image_url'], '/images/')) {
-                    $imageService->delete($oldChampion['image_url']);
+                    $this->imageUploadService->delete($oldChampion['image_url']);
                 }
                 $imageUrl = $uploadedUrl;
             } else {
@@ -225,7 +241,7 @@ class AdminController extends Controller {
             'icon' => htmlspecialchars($_POST['icon'] ?? '')
         ];
         
-        $championModel->update((int)$id, $data);
+        $this->championModel->update((int)$id, $data);
         $this->auditService->logUpdate('champion', (int)$id, $oldChampion, $data);
         
         $this->jsonSuccess(['champion_id' => (int)$id, 'image_url' => $imageUrl]);
@@ -242,15 +258,14 @@ class AdminController extends Controller {
             return;
         }
         
-        $championModel = new Champion();
-        $champion = $championModel->findById((int)$id);
+        $champion = $this->championModel->findById((int)$id);
         
         if (!$champion) {
             $this->jsonError('Champion not found', 404);
             return;
         }
         
-        $championModel->delete((int)$id);
+        $this->championModel->delete((int)$id);
         $this->auditService->logDelete('champion', (int)$id, $champion);
         
         $this->jsonSuccess();
@@ -258,8 +273,7 @@ class AdminController extends Controller {
     
     public function missions(): void {
         $page = (int)($_GET['page'] ?? 1);
-        $missionModel = new Mission();
-        $result = $missionModel->paginate($page, 20, 'id', 'DESC');
+        $result = $this->missionModel->paginate($page, 20, 'id', 'DESC');
         
         $this->view('admin/missions', [
             'missions' => $result['items'],
@@ -281,7 +295,6 @@ class AdminController extends Controller {
             return;
         }
         
-        $missionModel = new Mission();
         $missionId = (int)($_POST['mission_id'] ?? 0);
         
         $data = [
@@ -298,11 +311,11 @@ class AdminController extends Controller {
         ];
         
         if ($missionId > 0) {
-            $oldMission = $missionModel->findById($missionId);
-            $missionModel->update($missionId, $data);
+            $oldMission = $this->missionModel->findById($missionId);
+            $this->missionModel->update($missionId, $data);
             $this->auditService->logUpdate('mission', $missionId, $oldMission, $data);
         } else {
-            $missionId = $missionModel->create($data);
+            $missionId = $this->missionModel->create($data);
             $this->auditService->logCreate('mission', $missionId, $data);
         }
         
@@ -320,15 +333,14 @@ class AdminController extends Controller {
             return;
         }
         
-        $missionModel = new Mission();
-        $mission = $missionModel->findById((int)$id);
+        $mission = $this->missionModel->findById((int)$id);
         
         if (!$mission) {
             $this->jsonError('Mission not found', 404);
             return;
         }
         
-        $missionModel->delete((int)$id);
+        $this->missionModel->delete((int)$id);
         $this->auditService->logDelete('mission', (int)$id, $mission);
         
         $this->jsonSuccess();
@@ -345,8 +357,7 @@ class AdminController extends Controller {
             return;
         }
         
-        $missionModel = new Mission();
-        $mission = $missionModel->findById((int)$id);
+        $mission = $this->missionModel->findById((int)$id);
         
         if (!$mission) {
             $this->jsonError('Mission not found', 404);
@@ -354,7 +365,7 @@ class AdminController extends Controller {
         }
         
         $oldValue = (bool)$mission['is_active'];
-        $missionModel->update((int)$id, [
+        $this->missionModel->update((int)$id, [
             'is_active' => !$mission['is_active']
         ]);
         
@@ -378,7 +389,7 @@ class AdminController extends Controller {
     private function getLeaderboard(int $limit = 10, int $page = 1): array {
         $offset = ($page - 1) * $limit;
         
-        $db = \Core\Database::getInstance();
+        $db = Database::getInstance();
         $stmt = $db->prepare("
             SELECT 
                 u.id,
@@ -407,8 +418,7 @@ class AdminController extends Controller {
     
     public function equipment(): void {
         $page = (int)($_GET['page'] ?? 1);
-        $equipmentModel = new Equipment();
-        $result = $equipmentModel->paginate($page, 20, 'tier', 'DESC');
+        $result = $this->equipmentModel->paginate($page, 20, 'tier', 'DESC');
         
         $this->view('admin/equipment', [
             'items' => $result['items'],
@@ -430,7 +440,6 @@ class AdminController extends Controller {
             return;
         }
         
-        $equipmentModel = new Equipment();
         $data = [
             'name' => htmlspecialchars($_POST['name']),
             'type' => $_POST['type'],
@@ -444,7 +453,7 @@ class AdminController extends Controller {
             'description' => htmlspecialchars($_POST['description'] ?? '')
         ];
         
-        $equipmentId = $equipmentModel->create($data);
+        $equipmentId = $this->equipmentModel->create($data);
         
         $this->auditService->logCreate('equipment', $equipmentId, $data);
         
@@ -462,8 +471,7 @@ class AdminController extends Controller {
             return;
         }
         
-        $equipmentModel = new Equipment();
-        $oldEquipment = $equipmentModel->findById((int)$id);
+        $oldEquipment = $this->equipmentModel->findById((int)$id);
         
         if (!$oldEquipment) {
             $this->jsonError('Equipment not found', 404);
@@ -483,7 +491,7 @@ class AdminController extends Controller {
             'description' => htmlspecialchars($_POST['description'] ?? '')
         ];
         
-        $equipmentModel->update((int)$id, $data);
+        $this->equipmentModel->update((int)$id, $data);
         $this->auditService->logUpdate('equipment', (int)$id, $oldEquipment, $data);
         
         $this->jsonSuccess(['equipment_id' => (int)$id]);
@@ -500,31 +508,27 @@ class AdminController extends Controller {
             return;
         }
         
-        $equipmentModel = new Equipment();
-        $equipment = $equipmentModel->findById((int)$id);
+        $equipment = $this->equipmentModel->findById((int)$id);
         
         if (!$equipment) {
             $this->jsonError('Equipment not found', 404);
             return;
         }
         
-        $equipmentModel->delete((int)$id);
+        $this->equipmentModel->delete((int)$id);
         $this->auditService->logDelete('equipment', (int)$id, $equipment);
         
         $this->jsonSuccess();
     }
     
-    public function pvpHistory(): void
-    {
+    public function pvpHistory(): void {
         $page = (int)($_GET['page'] ?? 1);
         $perPage = 50;
         $offset = ($page - 1) * $perPage;
         
-        $pvpBattleModel = new PvpBattle();
-        
-        $battles = $pvpBattleModel->getBattles($perPage, $offset);
-        $stats = $pvpBattleModel->getStats();
-        $topWinners = $pvpBattleModel->getRecentWinners(10);
+        $battles = $this->pvpBattleModel->getBattles($perPage, $offset);
+        $stats = $this->pvpBattleModel->getStats();
+        $topWinners = $this->pvpBattleModel->getRecentWinners(10);
         
         $this->view('admin/pvp-history', [
             'battles' => $battles,
@@ -534,10 +538,8 @@ class AdminController extends Controller {
         ]);
     }
     
-    public function bulkRewards(): void
-    {
-        $userModel = new User();
-        $users = $userModel->where('is_active', true);
+    public function bulkRewards(): void {
+        $users = $this->userModel->where('is_active', true);
         
         $this->view('admin/bulk-rewards', [
             'users' => $users,
@@ -545,8 +547,7 @@ class AdminController extends Controller {
         ]);
     }
     
-    public function sendBulkRewards(): void
-    {
+    public function sendBulkRewards(): void {
         if (!Session::isAdmin()) {
             $this->jsonError('Unauthorized', 403);
             return;
@@ -571,26 +572,22 @@ class AdminController extends Controller {
             return;
         }
         
-        $userModel = new User();
-        $resourceModel = new Resource();
-        
         if ($targetType === 'selected' && !empty($targetUsers)) {
             $userIds = is_array($targetUsers) ? $targetUsers : explode(',', $targetUsers);
         } elseif ($targetType === 'level_min') {
             $minLevel = (int)($_POST['min_level'] ?? 1);
-            $users = $userModel->where('level', $minLevel, '>=');
+            $users = $this->userModel->where('level', $minLevel, '>=');
             $userIds = array_column($users, 'id');
         } else {
-            $users = $userModel->where('is_active', true);
+            $users = $this->userModel->where('is_active', true);
             $userIds = array_column($users, 'id');
         }
         
         $recipients = 0;
-        $resourceModel = new Resource();
         
         foreach ($userIds as $userId) {
             $userId = (int)$userId;
-            $resources = $resourceModel->getUserResources($userId);
+            $resources = $this->resourceModel->getUserResources($userId);
             
             if (!$resources) continue;
             
@@ -607,12 +604,12 @@ class AdminController extends Controller {
             }
             
             if (!empty($updateData)) {
-                $resourceModel->update($resources['id'], $updateData);
+                $this->resourceModel->update($resources['id'], $updateData);
             }
             
             if ($lootboxCount > 0 && $lootboxType) {
                 for ($i = 0; $i < $lootboxCount; $i++) {
-                    $resourceModel->addLootbox($userId, $lootboxType);
+                    $this->resourceModel->addLootbox($userId, $lootboxType);
                 }
             }
             
@@ -635,15 +632,12 @@ class AdminController extends Controller {
         ]);
     }
     
-    public function analytics(): void
-    {
-        $analyticsService = new AnalyticsService();
-        
-        $dailyActive = $analyticsService->getDailyActiveUsers(7);
-        $pageViews = $analyticsService->getEventCounts('page_view', 7);
-        $battleStarts = $analyticsService->getEventCounts('battle_start', 7);
-        $topEvents = $analyticsService->getTopEvents(10);
-        $retention = $analyticsService->getRetentionData(30);
+    public function analytics(): void {
+        $dailyActive = $this->analyticsService->getDailyActiveUsers(7);
+        $pageViews = $this->analyticsService->getEventCounts('page_view', 7);
+        $battleStarts = $this->analyticsService->getEventCounts('battle_start', 7);
+        $topEvents = $this->analyticsService->getTopEvents(10);
+        $retention = $this->analyticsService->getRetentionData(30);
         
         $this->view('admin/analytics', [
             'dailyActive' => $dailyActive,
@@ -654,13 +648,11 @@ class AdminController extends Controller {
         ]);
     }
     
-    public function logs(): void
-    {
-        $logger = new Logger();
+    public function logs(): void {
         $date = $_GET['date'] ?? null;
         
-        $logs = $logger->getLogs($date, 200);
-        $files = $logger->getLogFiles();
+        $logs = $this->logger->getLogs($date, 200);
+        $files = $this->logger->getLogFiles();
         
         $this->view('admin/logs', [
             'logs' => $logs,
@@ -669,12 +661,9 @@ class AdminController extends Controller {
         ]);
     }
     
-    public function seasons(): void
-    {
-        $seasonService = new SeasonService();
-        
-        $seasons = $seasonService->getSeasons(10);
-        $activeSeason = $seasonService->getActiveSeason();
+    public function seasons(): void {
+        $seasons = $this->seasonService->getSeasons(10);
+        $activeSeason = $this->seasonService->getActiveSeason();
         
         $this->view('admin/seasons', [
             'seasons' => $seasons,
@@ -682,8 +671,7 @@ class AdminController extends Controller {
         ]);
     }
     
-    public function endSeason(): void
-    {
+    public function endSeason(): void {
         if (!Session::isAdmin()) {
             $this->jsonError('Unauthorized', 403);
             return;
@@ -696,8 +684,7 @@ class AdminController extends Controller {
         
         $seasonId = (int)($_POST['season_id'] ?? 0);
         
-        $seasonService = new SeasonService();
-        $result = $seasonService->endSeason($seasonId);
+        $result = $this->seasonService->endSeason($seasonId);
         
         if ($result) {
             $this->auditService->log('end_season', 'pvp_season', $seasonId);
@@ -707,8 +694,7 @@ class AdminController extends Controller {
         }
     }
     
-    public function startSeason(): void
-    {
+    public function startSeason(): void {
         if (!Session::isAdmin()) {
             $this->jsonError('Unauthorized', 403);
             return;
@@ -728,8 +714,7 @@ class AdminController extends Controller {
             return;
         }
         
-        $seasonService = new SeasonService();
-        $seasonId = $seasonService->startNewSeason($name, $description, $durationDays);
+        $seasonId = $this->seasonService->startNewSeason($name, $description, $durationDays);
         
         $this->auditService->log('start_season', 'pvp_season', $seasonId, [
             'name' => $name,
@@ -740,8 +725,7 @@ class AdminController extends Controller {
     }
     
     public function tournaments(): void {
-        $tournamentModel = new \App\Models\Tournament();
-        $tournaments = $tournamentModel->db->query("
+        $tournaments = $this->tournamentModel->db->query("
             SELECT t.*, 
                    (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) as participant_count
             FROM tournaments t
@@ -756,6 +740,7 @@ class AdminController extends Controller {
     public function createTournament(): void {
         if (!Session::isAdmin()) {
             $this->redirect('/admin');
+            return;
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -767,6 +752,7 @@ class AdminController extends Controller {
         
         if (!$this->validateCsrf()) {
             $this->redirectWithError('/admin/tournaments', 'Invalid request');
+            return;
         }
         
         $name = trim($_POST['name'] ?? '');
@@ -779,9 +765,10 @@ class AdminController extends Controller {
         
         if (empty($name)) {
             $this->redirectWithError('/admin/tournaments', 'Name is required');
+            return;
         }
         
-        $tournamentService = new \App\Services\TournamentService();
+        $tournamentService = new TournamentService();
         $tournamentId = $tournamentService->createTournament([
             'name' => $name,
             'description' => $description,
@@ -800,13 +787,15 @@ class AdminController extends Controller {
     public function startTournament(int $id): void {
         if (!Session::isAdmin()) {
             $this->jsonError('Unauthorized', 403);
+            return;
         }
         
         if (!$this->validateCsrf()) {
             $this->jsonError('Invalid request', 403);
+            return;
         }
         
-        $tournamentService = new \App\Services\TournamentService();
+        $tournamentService = new TournamentService();
         $success = $tournamentService->generateBracket($id);
         
         if ($success) {
@@ -820,14 +809,15 @@ class AdminController extends Controller {
     public function cancelTournament(int $id): void {
         if (!Session::isAdmin()) {
             $this->jsonError('Unauthorized', 403);
+            return;
         }
         
         if (!$this->validateCsrf()) {
             $this->jsonError('Invalid request', 403);
+            return;
         }
         
-        $tournamentModel = new \App\Models\Tournament();
-        $success = $tournamentModel->update($id, ['status' => 'cancelled']);
+        $success = $this->tournamentModel->update($id, ['status' => 'cancelled']);
         
         if ($success) {
             $this->auditService->log('cancel_tournament', 'tournaments', $id);
@@ -840,13 +830,14 @@ class AdminController extends Controller {
     public function editTournamentRewards(int $id): void {
         if (!Session::isAdmin()) {
             $this->redirect('/admin');
+            return;
         }
         
-        $tournamentModel = new \App\Models\Tournament();
-        $tournament = $tournamentModel->getWithRewards($id);
+        $tournament = $this->tournamentModel->getWithRewards($id);
         
         if (!$tournament) {
             $this->redirect('/admin/tournaments');
+            return;
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -859,9 +850,10 @@ class AdminController extends Controller {
         
         if (!$this->validateCsrf()) {
             $this->redirectWithError('/admin/tournaments', 'Invalid request');
+            return;
         }
         
-        $db = \Core\Database::getInstance();
+        $db = Database::getInstance();
         $db->prepare("DELETE FROM tournament_rewards WHERE tournament_id = ?")->execute([$id]);
         
         $places = $_POST['places'] ?? [];

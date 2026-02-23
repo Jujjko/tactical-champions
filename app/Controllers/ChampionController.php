@@ -6,30 +6,42 @@ namespace App\Controllers;
 use Core\Controller;
 use Core\Session;
 use App\Models\UserChampion;
+use App\Models\ChampionShard;
 use App\Models\Champion;
-use App\Models\Battle;
 use App\Models\Resource;
 use App\Models\UserEquipment;
 use App\Services\ChampionService;
 use App\Services\FusionService;
 use App\Services\QuestService;
+use App\Services\AscensionService;
 
 class ChampionController extends Controller {
     private ChampionService $championService;
     private FusionService $fusionService;
     private QuestService $questService;
+    private AscensionService $ascensionService;
+    private UserChampion $userChampionModel;
+    private Champion $championModel;
+    private ChampionShard $championShardModel;
+    private Resource $resourceModel;
+    private UserEquipment $userEquipmentModel;
     
     public function __construct() {
         $this->championService = new ChampionService();
         $this->fusionService = new FusionService();
         $this->questService = new QuestService();
+        $this->ascensionService = new AscensionService();
+        $this->userChampionModel = new UserChampion();
+        $this->championModel = new Champion();
+        $this->championShardModel = new ChampionShard();
+        $this->resourceModel = new Resource();
+        $this->userEquipmentModel = new UserEquipment();
     }
     
     public function index(): void {
         $userId = Session::userId();
         
-        $championModel = new UserChampion();
-        $champions = $championModel->getUserChampions($userId);
+        $champions = $this->userChampionModel->getUserChampions($userId);
         
         $fusionEligible = [];
         foreach ($champions as $champion) {
@@ -51,30 +63,66 @@ class ChampionController extends Controller {
         $userId = Session::userId();
         $championId = (int)$id;
         
-        $championModel = new UserChampion();
-        $champion = $championModel->getChampionWithDetails($championId, $userId);
+        $champion = $this->userChampionModel->getChampionWithDetails($championId, $userId);
         
         if (!$champion) {
             $this->redirectWithError('/champions', 'Champion not found');
             return;
         }
         
-        $resourceModel = new Resource();
-        $userEquipmentModel = new UserEquipment();
-        
-        $equipment = $userEquipmentModel->getChampionEquipment($championId);
-        $equipmentStats = $userEquipmentModel->getTotalStats($championId);
+        $equipment = $this->userEquipmentModel->getChampionEquipment($championId);
+        $equipmentStats = $this->userEquipmentModel->getTotalStats($championId);
         $fusionInfo = $this->fusionService->canFuse($userId, $championId);
         $fusionCandidates = $this->fusionService->getFusionCandidates($userId, $championId);
+        $ascensionInfo = $this->ascensionService->getAscensionInfo($userId, $championId);
         
         $this->view('game/champion-detail', [
             'champion' => $champion,
-            'resources' => $resourceModel->getUserResources($userId),
+            'resources' => $this->resourceModel->getUserResources($userId),
             'equipment' => $equipment,
             'equipmentStats' => $equipmentStats,
             'fusionInfo' => $fusionInfo,
             'fusionCandidates' => $fusionCandidates,
+            'ascensionInfo' => $ascensionInfo,
         ]);
+    }
+    
+    public function ascend(string $id): void {
+        $userId = Session::userId();
+        $userChampionId = (int)$id;
+        
+        if (!$this->validateCsrf()) {
+            $this->jsonError('Invalid request', 403);
+            return;
+        }
+        
+        $result = $this->ascensionService->ascend($userId, $userChampionId);
+        
+        if ($result['success']) {
+            $this->questService->trackChampionUpgrade($userId);
+            $this->jsonSuccess($result);
+        } else {
+            $this->jsonError($result['error'], 400);
+        }
+    }
+    
+    public function tierUp(string $id): void {
+        $userId = Session::userId();
+        $userChampionId = (int)$id;
+        
+        if (!$this->validateCsrf()) {
+            $this->jsonError('Invalid request', 403);
+            return;
+        }
+        
+        $result = $this->ascensionService->tierUp($userId, $userChampionId);
+        
+        if ($result['success']) {
+            $this->questService->trackChampionUpgrade($userId);
+            $this->jsonSuccess($result);
+        } else {
+            $this->jsonError($result['error'], 400);
+        }
     }
     
     public function upgrade(string $id): void {
@@ -88,11 +136,9 @@ class ChampionController extends Controller {
             return;
         }
         
-        $resourceModel = new Resource();
-        
         $this->view('game/champion-upgrade', [
             'upgradeInfo' => $upgradeInfo,
-            'resources' => $resourceModel->getUserResources($userId)
+            'resources' => $this->resourceModel->getUserResources($userId)
         ]);
     }
     
@@ -118,12 +164,11 @@ class ChampionController extends Controller {
     public function history(): void {
         $userId = Session::userId();
         
-        $battleModel = new Battle();
         $page = (int)($_GET['page'] ?? 1);
         $perPage = 20;
         
-        $battles = $battleModel->getUserBattles($userId, $perPage);
-        $stats = $battleModel->getUserStats($userId);
+        $battles = $this->battleModel->getUserBattles($userId, $perPage);
+        $stats = $this->battleModel->getUserStats($userId);
         
         $this->view('game/battle-history', [
             'battles' => $battles,
@@ -136,8 +181,7 @@ class ChampionController extends Controller {
         $userId = Session::userId();
         $championId = (int)$id;
         
-        $championModel = new UserChampion();
-        $champion = $championModel->getChampionWithDetails($championId, $userId);
+        $champion = $this->userChampionModel->getChampionWithDetails($championId, $userId);
         
         if (!$champion) {
             $this->redirectWithError('/champions', 'Champion not found');
@@ -146,13 +190,12 @@ class ChampionController extends Controller {
         
         $fusionCandidates = $this->fusionService->getFusionCandidates($userId, $championId);
         $fusionInfo = $this->fusionService->canFuse($userId, $championId);
-        $resourceModel = new Resource();
         
         $this->view('game/champion-fusion', [
             'champion' => $champion,
             'fusionCandidates' => $fusionCandidates,
             'fusionInfo' => $fusionInfo,
-            'resources' => $resourceModel->getUserResources($userId),
+            'resources' => $this->resourceModel->getUserResources($userId),
         ]);
     }
     
@@ -185,5 +228,15 @@ class ChampionController extends Controller {
         } else {
             $this->jsonError($result['error'], 400);
         }
+    }
+    
+    public function shards(): void {
+        $userId = Session::userId();
+        
+        $shards = $this->championShardModel->getAllForUser($userId);
+        
+        $this->view('game/shards', [
+            'shards' => $shards,
+        ]);
     }
 }

@@ -5,29 +5,32 @@ namespace App\Controllers;
 
 use Core\Controller;
 use Core\Session;
+use Core\Database;
 use App\Models\ShopItem;
 use App\Models\UserPurchase;
 use App\Models\Resource;
 use App\Services\AuditService;
 
 class ShopController extends Controller {
+    private ShopItem $shopItemModel;
+    private UserPurchase $userPurchaseModel;
+    private Resource $resourceModel;
     private AuditService $auditService;
     
     public function __construct() {
+        $this->shopItemModel = new ShopItem();
+        $this->userPurchaseModel = new UserPurchase();
+        $this->resourceModel = new Resource();
         $this->auditService = new AuditService();
     }
     
     public function index(): void {
-        $shopItemModel = new ShopItem();
-        $userPurchaseModel = new UserPurchase();
-        $resourceModel = new Resource();
-        
         $userId = Session::userId();
         
-        $items = $shopItemModel->getActiveItems();
-        $featured = $shopItemModel->getFeaturedItems();
-        $totalSpent = $userPurchaseModel->getTotalSpent($userId);
-        $resources = $resourceModel->getUserResources($userId);
+        $items = $this->shopItemModel->getActiveItems();
+        $featured = $this->shopItemModel->getFeaturedItems();
+        $totalSpent = $this->userPurchaseModel->getTotalSpent($userId);
+        $resources = $this->resourceModel->getUserResources($userId);
         
         $byCategory = [];
         foreach ($items as $item) {
@@ -53,8 +56,7 @@ class ShopController extends Controller {
         
         $quantity = max(1, (int)($_POST['quantity'] ?? 1));
         
-        $shopItemModel = new ShopItem();
-        $item = $shopItemModel->findById($itemId);
+        $item = $this->shopItemModel->findById($itemId);
         
         if (!$item || !$item['is_active']) {
             $this->jsonError('Item not available', 404);
@@ -69,56 +71,63 @@ class ShopController extends Controller {
         $totalGems = $item['price_gems'] * $quantity;
         $totalGold = $item['price_gold'] * $quantity;
         
-        $resourceModel = new Resource();
-        $resources = $resourceModel->getUserResources($userId);
+        $db = Database::getInstance();
+        $db->beginTransaction();
         
-        if ($resources['gems'] < $totalGems || $resources['gold'] < $totalGold) {
-            $this->jsonError('Insufficient funds', 400);
-            return;
+        try {
+            if ($totalGems > 0 && !$this->resourceModel->deductGems($userId, $totalGems)) {
+                $db->rollBack();
+                $this->jsonError('Insufficient gems', 400);
+                return;
+            }
+            
+            if ($totalGold > 0 && !$this->resourceModel->deductGold($userId, $totalGold)) {
+                $db->rollBack();
+                if ($totalGems > 0) {
+                    $this->resourceModel->addGems($userId, $totalGems);
+                }
+                $this->jsonError('Insufficient gold', 400);
+                return;
+            }
+            
+            $this->applyItem($userId, $item, $quantity);
+            
+            $this->userPurchaseModel->recordPurchase($userId, $itemId, $item['name'], $quantity, $totalGems, $totalGold);
+            
+            $this->shopItemModel->incrementSold($itemId);
+            
+            $this->auditService->logCreate('purchase', $itemId, ['item' => $item['name'], 'quantity' => $quantity]);
+            
+            $db->commit();
+            
+            $this->jsonSuccess(['message' => 'Purchase successful!', 'item' => $item['name']]);
+        } catch (\Exception $e) {
+            $db->rollBack();
+            $this->jsonError('Purchase failed', 500);
         }
-        
-        if ($totalGems > 0) {
-            $resourceModel->deductGems($userId, $totalGems);
-        }
-        if ($totalGold > 0) {
-            $resourceModel->deductGold($userId, $totalGold);
-        }
-        
-        $this->applyItem($userId, $item, $quantity);
-        
-        $userPurchaseModel = new UserPurchase();
-        $userPurchaseModel->recordPurchase($userId, $itemId, $item['name'], $quantity, $totalGems, $totalGold);
-        
-        $shopItemModel->incrementSold($itemId);
-        
-        $this->auditService->logCreate('purchase', $itemId, ['item' => $item['name'], 'quantity' => $quantity]);
-        
-        $this->jsonSuccess(['message' => 'Purchase successful!', 'item' => $item['name']]);
     }
     
     private function applyItem(int $userId, array $item, int $quantity): void {
-        $resourceModel = new Resource();
-        
         switch ($item['item_type']) {
             case 'gold':
-                $resourceModel->addGold($userId, $item['item_value'] * $quantity);
+                $this->resourceModel->addGold($userId, $item['item_value'] * $quantity);
                 break;
             case 'gems':
-                $resourceModel->addGems($userId, $item['item_value'] * $quantity);
+                $this->resourceModel->addGems($userId, $item['item_value'] * $quantity);
                 break;
             case 'energy':
-                $resourceModel->addEnergy($userId, $item['item_value'] * $quantity);
+                $this->resourceModel->addEnergy($userId, $item['item_value'] * $quantity);
                 break;
             case 'energy_refill':
-                $resources = $resourceModel->getUserResources($userId);
-                $resourceModel->setEnergy($userId, $resources['max_energy']);
+                $resources = $this->resourceModel->getUserResources($userId);
+                $this->resourceModel->setEnergy($userId, $resources['max_energy']);
                 break;
             case 'lootbox_bronze':
             case 'lootbox_silver':
             case 'lootbox_gold':
                 $lootboxType = str_replace('lootbox_', '', $item['item_type']);
                 for ($i = 0; $i < $quantity; $i++) {
-                    $resourceModel->addLootbox($userId, $lootboxType);
+                    $this->resourceModel->addLootbox($userId, $lootboxType);
                 }
                 break;
         }

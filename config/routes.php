@@ -17,11 +17,14 @@ $router->post('/reset-password', 'AuthController', 'resetPassword');
 // Protected game routes
 $router->get('/dashboard', 'GameController', 'dashboard', [AuthMiddleware::class]);
 $router->get('/champions', 'ChampionController', 'index', [AuthMiddleware::class]);
+$router->get('/champions/shards', 'ChampionController', 'shards', [AuthMiddleware::class]);
 $router->get('/champions/{id}', 'ChampionController', 'show', [AuthMiddleware::class]);
 $router->get('/champions/{id}/upgrade', 'ChampionController', 'upgrade', [AuthMiddleware::class]);
 $router->post('/champions/{id}/upgrade', 'ChampionController', 'doUpgrade', [AuthMiddleware::class]);
 $router->get('/champions/{id}/fusion', 'ChampionController', 'fusion', [AuthMiddleware::class]);
 $router->post('/champions/fusion', 'ChampionController', 'doFusion', [AuthMiddleware::class]);
+$router->post('/champions/{id}/ascend', 'ChampionController', 'ascend', [AuthMiddleware::class]);
+$router->post('/champions/{id}/tier-up', 'ChampionController', 'tierUp', [AuthMiddleware::class]);
 $router->get('/battle-history', 'ChampionController', 'history', [AuthMiddleware::class]);
 $router->get('/missions', 'MissionController', 'index', [AuthMiddleware::class]);
 $router->get('/lootbox', 'LootboxController', 'index', [AuthMiddleware::class]);

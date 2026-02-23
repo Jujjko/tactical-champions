@@ -10,18 +10,26 @@ use App\Models\UserQuest;
 use App\Models\Resource;
 
 class QuestController extends Controller {
+    private Quest $questModel;
+    private UserQuest $userQuestModel;
+    private Resource $resourceModel;
+    
+    public function __construct() {
+        $this->questModel = new Quest();
+        $this->userQuestModel = new UserQuest();
+        $this->resourceModel = new Resource();
+    }
+    
     public function index(): void {
         $userId = Session::userId();
         
-        $userQuestModel = new UserQuest();
-        $userQuestModel->initializeUserQuests($userId);
+        $this->userQuestModel->initializeUserQuests($userId);
         
-        $dailyQuests = $userQuestModel->getUserDailyQuests($userId);
-        $weeklyQuests = $userQuestModel->getUserWeeklyQuests($userId);
-        $unclaimedCount = $userQuestModel->getUnclaimedCount($userId);
+        $dailyQuests = $this->userQuestModel->getUserDailyQuests($userId);
+        $weeklyQuests = $this->userQuestModel->getUserWeeklyQuests($userId);
+        $unclaimedCount = $this->userQuestModel->getUnclaimedCount($userId);
         
-        $resourceModel = new Resource();
-        $resources = $resourceModel->getUserResources($userId);
+        $resources = $this->resourceModel->getUserResources($userId);
         
         $this->view('game/quests', [
             'dailyQuests' => $dailyQuests,
@@ -40,8 +48,7 @@ class QuestController extends Controller {
             return;
         }
         
-        $userQuestModel = new UserQuest();
-        $result = $userQuestModel->claimReward($userId, $userQuestId);
+        $result = $this->userQuestModel->claimReward($userId, $userQuestId);
         
         if (!$result['success']) {
             $this->jsonError($result['error'] ?? 'Failed to claim reward', 400);
@@ -50,12 +57,11 @@ class QuestController extends Controller {
         
         $rewards = $result['rewards'];
         
-        $resourceModel = new Resource();
         if ($rewards['gold'] > 0) {
-            $resourceModel->addGold($userId, $rewards['gold']);
+            $this->resourceModel->addGold($userId, $rewards['gold']);
         }
         if ($rewards['gems'] > 0) {
-            $resourceModel->addGems($userId, $rewards['gems']);
+            $this->resourceModel->addGems($userId, $rewards['gems']);
         }
         
         $this->jsonSuccess([
@@ -72,15 +78,14 @@ class QuestController extends Controller {
             return;
         }
         
-        $userQuestModel = new UserQuest();
-        $unclaimedQuests = $userQuestModel->getUnclaimedQuests($userId);
+        $unclaimedQuests = $this->userQuestModel->getUnclaimedQuests($userId);
         
         $totalGold = 0;
         $totalGems = 0;
         $claimed = 0;
         
         foreach ($unclaimedQuests as $q) {
-            $result = $userQuestModel->claimReward($userId, $q['id']);
+            $result = $this->userQuestModel->claimReward($userId, $q['id']);
             if ($result['success']) {
                 $totalGold += $result['rewards']['gold'] ?? 0;
                 $totalGems += $result['rewards']['gems'] ?? 0;
@@ -88,12 +93,11 @@ class QuestController extends Controller {
             }
         }
         
-        $resourceModel = new Resource();
         if ($totalGold > 0) {
-            $resourceModel->addGold($userId, $totalGold);
+            $this->resourceModel->addGold($userId, $totalGold);
         }
         if ($totalGems > 0) {
-            $resourceModel->addGems($userId, $totalGems);
+            $this->resourceModel->addGems($userId, $totalGems);
         }
         
         $this->jsonSuccess([

@@ -11,21 +11,24 @@ use App\Models\User;
 use App\Services\AuditService;
 
 class GuildController extends Controller {
+    private Guild $guildModel;
+    private GuildMember $guildMemberModel;
+    private User $userModel;
     private AuditService $auditService;
     
     public function __construct() {
+        $this->guildModel = new Guild();
+        $this->guildMemberModel = new GuildMember();
+        $this->userModel = new User();
         $this->auditService = new AuditService();
     }
     
     public function index(): void {
         $userId = Session::userId();
         
-        $guildMemberModel = new GuildMember();
-        $guildModel = new Guild();
-        
-        $userGuild = $guildMemberModel->getUserGuild($userId);
-        $recruitingGuilds = $guildModel->getRecruitingGuilds(20);
-        $leaderboard = $guildModel->getLeaderboard(10);
+        $userGuild = $this->guildMemberModel->getUserGuild($userId);
+        $recruitingGuilds = $this->guildModel->getRecruitingGuilds(20);
+        $leaderboard = $this->guildModel->getLeaderboard(10);
         
         $this->view('game/guilds', [
             'userGuild' => $userGuild,
@@ -38,17 +41,14 @@ class GuildController extends Controller {
         $userId = Session::userId();
         $guildId = (int)$id;
         
-        $guildModel = new Guild();
-        $guildMemberModel = new GuildMember();
-        
-        $guild = $guildModel->findByIdWithMembers($guildId);
+        $guild = $this->guildModel->findByIdWithMembers($guildId);
         
         if (!$guild) {
             $this->redirectWithError('/guilds', 'Guild not found');
             return;
         }
         
-        $isMember = $guildMemberModel->isMemberOf($userId, $guildId);
+        $isMember = $this->guildMemberModel->isMemberOf($userId, $guildId);
         
         $this->view('game/guild-detail', [
             'guild' => $guild,
@@ -59,8 +59,7 @@ class GuildController extends Controller {
     public function create(): void {
         $userId = Session::userId();
         
-        $guildMemberModel = new GuildMember();
-        $existingGuild = $guildMemberModel->getUserGuild($userId);
+        $existingGuild = $this->guildMemberModel->getUserGuild($userId);
         
         if ($existingGuild) {
             $this->jsonError('You are already in a guild', 400);
@@ -86,10 +85,8 @@ class GuildController extends Controller {
             return;
         }
         
-        $guildModel = new Guild();
-        
         try {
-            $guildId = $guildModel->createGuild($userId, $name, strtoupper($tag), $description);
+            $guildId = $this->guildModel->createGuild($userId, $name, strtoupper($tag), $description);
             $this->auditService->logCreate('guild', $guildId, ['name' => $name, 'tag' => $tag]);
             $this->jsonSuccess(['guild_id' => $guildId, 'message' => 'Guild created!']);
         } catch (\PDOException $e) {
@@ -101,30 +98,26 @@ class GuildController extends Controller {
         $userId = Session::userId();
         $guildId = (int)$id;
         
-        $guildMemberModel = new GuildMember();
-        $guildModel = new Guild();
-        
-        $existingGuild = $guildMemberModel->getUserGuild($userId);
+        $existingGuild = $this->guildMemberModel->getUserGuild($userId);
         if ($existingGuild) {
             $this->jsonError('You are already in a guild', 400);
             return;
         }
         
-        $guild = $guildModel->findById($guildId);
+        $guild = $this->guildModel->findById($guildId);
         if (!$guild || !$guild['is_recruiting']) {
             $this->jsonError('Guild is not recruiting', 400);
             return;
         }
         
-        $userModel = new User();
-        $user = $userModel->findById($userId);
+        $user = $this->userModel->findById($userId);
         
         if ($user['level'] < $guild['min_level_req']) {
             $this->jsonError('Level requirement not met', 400);
             return;
         }
         
-        if ($guildMemberModel->joinGuild($userId, $guildId)) {
+        if ($this->guildMemberModel->joinGuild($userId, $guildId)) {
             $this->jsonSuccess(['message' => 'Joined guild successfully!']);
         } else {
             $this->jsonError('Failed to join guild', 400);
@@ -139,8 +132,7 @@ class GuildController extends Controller {
             return;
         }
         
-        $guildMemberModel = new GuildMember();
-        $userGuild = $guildMemberModel->getUserGuild($userId);
+        $userGuild = $this->guildMemberModel->getUserGuild($userId);
         
         if (!$userGuild) {
             $this->jsonError('You are not in a guild', 400);
@@ -152,7 +144,7 @@ class GuildController extends Controller {
             return;
         }
         
-        $guildMemberModel->leaveGuild($userId);
+        $this->guildMemberModel->leaveGuild($userId);
         
         $this->jsonSuccess(['message' => 'Left guild successfully']);
     }

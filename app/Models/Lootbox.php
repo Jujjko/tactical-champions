@@ -125,9 +125,9 @@ class Lootbox extends Model {
         $mult = $multipliers[$type] ?? 1;
         
         return [
-            'gold' => rand(50, 150) * $mult,
-            'gems' => rand(5, 20) * $mult,
-            'champion' => rand(1, 100) <= (20 * $mult)
+            'gold' => random_int(50, 150) * $mult,
+            'gems' => random_int(5, 20) * $mult,
+            'champion' => random_int(1, 100) <= (20 * $mult)
         ];
     }
 }

@@ -28,7 +28,7 @@ class Mission extends Model {
     public function completeMission(int $userId, int $missionId): array {
         $mission = $this->findById($missionId);
         
-        $lootboxEarned = (rand(1, 10000) / 100) <= $mission['lootbox_chance'];
+        $lootboxEarned = (random_int(1, 10000) / 100) <= $mission['lootbox_chance'];
         
         $stmt = $this->db->prepare("
             INSERT INTO mission_completions 

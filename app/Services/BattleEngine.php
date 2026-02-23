@@ -109,8 +109,7 @@ class BattleEngine {
         
         if ($attacker['frozen']) {
             $this->logAction("{$attacker['name']} is frozen and cannot act!");
-            // 50% chance to break free
-            if (rand(1, 100) <= 50) {
+            if (random_int(1, 100) <= 50) {
                 $this->updateChampion($attackerId, ['frozen' => false]);
                 $this->logAction("{$attacker['name']} broke free from freeze!");
             }
@@ -217,24 +216,20 @@ class BattleEngine {
             return false;
         }
         
-        // 30% chance to use ability when available
-        return rand(1, 100) <= 30;
+        return random_int(1, 100) <= 30;
     }
     
     /**
      * Execute basic attack
      */
     private function executeAttack(array $attacker, array $target): array {
-        // Calculate damage with variance (80-120%)
-        $variance = rand(80, 120) / 100;
+        $variance = random_int(80, 120) / 100;
         $baseDamage = $attacker['attack'] * $variance;
         
-        // Apply defense reduction (defense reduces damage by %)
         $damageReduction = min($target['defense'] / ($target['defense'] + 100), 0.75);
         $finalDamage = (int)($baseDamage * (1 - $damageReduction));
         
-        // Critical hit chance (10%)
-        $isCritical = rand(1, 100) <= 10;
+        $isCritical = random_int(1, 100) <= 10;
         if ($isCritical) {
             $finalDamage = (int)($finalDamage * 1.5);
         }

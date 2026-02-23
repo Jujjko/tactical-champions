@@ -71,6 +71,24 @@ class Referral extends Model {
         return (int)$stmt->fetchColumn();
     }
     
+    public function findByIdAndReferrer(int $referralId, int $referrerId): ?array {
+        $stmt = $this->db->prepare("
+            SELECT * FROM {$this->table} 
+            WHERE id = ? AND referrer_id = ?
+        ");
+        $stmt->execute([$referralId, $referrerId]);
+        return $stmt->fetch() ?: null;
+    }
+    
+    public function markRewardClaimed(int $referralId): bool {
+        $stmt = $this->db->prepare("
+            UPDATE {$this->table} 
+            SET referrer_reward_claimed = TRUE 
+            WHERE id = ?
+        ");
+        return $stmt->execute([$referralId]);
+    }
+    
     private function generateCode(): string {
         $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         $code = '';

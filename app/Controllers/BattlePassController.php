@@ -7,15 +7,23 @@ use Core\Controller;
 use Core\Session;
 use App\Models\BattlePassSeason;
 use App\Models\UserBattlePass;
+use App\Models\Resource;
 
 class BattlePassController extends Controller {
+    private BattlePassSeason $seasonModel;
+    private UserBattlePass $userPassModel;
+    private Resource $resourceModel;
+    
+    public function __construct() {
+        $this->seasonModel = new BattlePassSeason();
+        $this->userPassModel = new UserBattlePass();
+        $this->resourceModel = new Resource();
+    }
+    
     public function index(): void {
         $userId = Session::userId();
         
-        $seasonModel = new BattlePassSeason();
-        $userPassModel = new UserBattlePass();
-        
-        $season = $seasonModel->getActiveSeason();
+        $season = $this->seasonModel->getActiveSeason();
         
         if (!$season) {
             $this->view('game/battle-pass', [
@@ -26,8 +34,8 @@ class BattlePassController extends Controller {
             return;
         }
         
-        $progress = $userPassModel->getOrCreate($userId, $season['id']);
-        $rewards = $seasonModel->getRewards($season['id']);
+        $progress = $this->userPassModel->getOrCreate($userId, $season['id']);
+        $rewards = $this->seasonModel->getRewards($season['id']);
         
         $this->view('game/battle-pass', [
             'season' => $season,
@@ -45,17 +53,14 @@ class BattlePassController extends Controller {
             return;
         }
         
-        $seasonModel = new BattlePassSeason();
-        $userPassModel = new UserBattlePass();
-        
-        $season = $seasonModel->getActiveSeason();
+        $season = $this->seasonModel->getActiveSeason();
         
         if (!$season) {
             $this->jsonError('No active season', 400);
             return;
         }
         
-        $progress = $userPassModel->getProgress($userId, $season['id']);
+        $progress = $this->userPassModel->getProgress($userId, $season['id']);
         
         if (!$progress || $progress['level'] < $claimLevel) {
             $this->jsonError('Level not reached', 400);
@@ -69,7 +74,7 @@ class BattlePassController extends Controller {
             return;
         }
         
-        $rewards = $seasonModel->getRewards($season['id']);
+        $rewards = $this->seasonModel->getRewards($season['id']);
         $reward = null;
         foreach ($rewards as $r) {
             if ($r['level'] === $claimLevel) {
@@ -82,8 +87,6 @@ class BattlePassController extends Controller {
             $this->jsonError('Reward not found', 404);
             return;
         }
-        
-        $resourceModel = new \App\Models\Resource();
         
         if ($isPremium) {
             $type = $reward['premium_reward_type'];
@@ -100,16 +103,16 @@ class BattlePassController extends Controller {
         
         switch ($type) {
             case 'gold':
-                $resourceModel->addGold($userId, $value);
+                $this->resourceModel->addGold($userId, $value);
                 break;
             case 'gems':
-                $resourceModel->addGems($userId, $value);
+                $this->resourceModel->addGems($userId, $value);
                 break;
             case 'energy':
-                $resourceModel->addEnergy($userId, $value);
+                $this->resourceModel->addEnergy($userId, $value);
                 break;
             case 'lootbox':
-                $resourceModel->addLootbox($userId, 'gold');
+                $this->resourceModel->addLootbox($userId, 'gold');
                 break;
         }
         

@@ -72,7 +72,7 @@ class RewardService {
             'experience' => $mission['experience_reward'] * $multiplier,
         ];
         
-        if (rand(1, 100) <= $mission['lootbox_chance']) {
+        if (random_int(1, 100) <= $mission['lootbox_chance']) {
             $rewards['lootbox_type'] = $this->determineLootboxType($mission['difficulty']);
             $rewards['lootbox_count'] = 1;
         }
@@ -165,10 +165,10 @@ class RewardService {
     
     private function determineLootboxType(string $difficulty): string {
         return match($difficulty) {
-            'easy' => rand(1, 100) <= 80 ? 'bronze' : 'silver',
-            'medium' => rand(1, 100) <= 60 ? 'silver' : 'gold',
-            'hard' => rand(1, 100) <= 70 ? 'gold' : 'diamond',
-            'expert' => rand(1, 100) <= 50 ? 'gold' : 'diamond',
+            'easy' => random_int(1, 100) <= 80 ? 'bronze' : 'silver',
+            'medium' => random_int(1, 100) <= 60 ? 'silver' : 'gold',
+            'hard' => random_int(1, 100) <= 70 ? 'gold' : 'diamond',
+            'expert' => random_int(1, 100) <= 50 ? 'gold' : 'diamond',
             default => 'bronze',
         };
     }

@@ -125,6 +125,17 @@ class UserChampion extends Model {
         return $stmt->fetchAll();
     }
     
+    public function hasChampion(int $userId, int $championId): bool
+    {
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) as count 
+            FROM {$this->table} 
+            WHERE user_id = ? AND champion_id = ? AND deleted_at IS NULL
+        ");
+        $stmt->execute([$userId, $championId]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+    
     private function invalidateCache(int $userId): void {
         CacheService::getInstance()->delete("user:{$userId}:champions");
     }

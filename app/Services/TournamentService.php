@@ -95,7 +95,7 @@ class TournamentService {
         $this->participantModel->create([
             'tournament_id' => $tournamentId,
             'user_id' => $userId,
-            'seed' => rand(1, 9999),
+            'seed' => random_int(1, 9999),
         ]);
         
         $newCount = $this->tournamentModel->getParticipantCount($tournamentId);

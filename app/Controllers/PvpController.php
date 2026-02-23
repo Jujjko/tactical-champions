@@ -10,15 +10,18 @@ use App\Services\PvpService;
 use App\Services\BattleEngine;
 use App\Services\BattleStateManager;
 use App\Models\UserChampion;
-use App\Models\PvpRating;
 
 class PvpController extends Controller {
     private MatchmakingService $matchmaking;
     private PvpService $pvpService;
+    private UserChampion $userChampionModel;
+    private BattleStateManager $battleStateManager;
     
     public function __construct() {
         $this->matchmaking = new MatchmakingService();
         $this->pvpService = new PvpService();
+        $this->userChampionModel = new UserChampion();
+        $this->battleStateManager = new BattleStateManager();
     }
     
     public function index(): void {
@@ -29,7 +32,7 @@ class PvpController extends Controller {
         $userId = Session::userId();
         $season = $this->matchmaking->getActiveSeason();
         $stats = $this->pvpService->getUserStats($userId);
-        $champions = (new UserChampion())->getUserChampions($userId);
+        $champions = $this->userChampionModel->getUserChampions($userId);
         $leaderboard = $this->matchmaking->getLeaderboard(10);
         $recentBattles = $this->pvpService->getBattleHistory($userId, 5);
         
@@ -110,8 +113,7 @@ class PvpController extends Controller {
         $battleState['my_champion_id'] = $myChampionId;
         $battleState['start_time'] = time();
         
-        $battleStateManager = new BattleStateManager();
-        $battleStateManager->save($userId, $battleState);
+        $this->battleStateManager->save($userId, $battleState);
         
         $this->jsonSuccess([
             'redirect' => '/pvp/battle',
@@ -125,14 +127,13 @@ class PvpController extends Controller {
         }
         
         $userId = Session::userId();
-        $battleStateManager = new BattleStateManager();
-        $battleState = $battleStateManager->get($userId);
+        $battleState = $this->battleStateManager->get($userId);
         
         if (!$battleState) {
             $this->redirect('/pvp');
         }
         
-        $myChampion = (new UserChampion())->getChampionWithDetails(
+        $myChampion = $this->userChampionModel->getChampionWithDetails(
             $battleState['my_champion_id'], 
             $userId
         );
@@ -161,8 +162,7 @@ class PvpController extends Controller {
         $targetId = $_POST['target_id'] ?? null;
         $useAbility = (bool)($_POST['use_ability'] ?? false);
         
-        $battleStateManager = new BattleStateManager();
-        $battleState = $battleStateManager->get($userId);
+        $battleState = $this->battleStateManager->get($userId);
         
         if (!$battleState) {
             $this->jsonError('No active battle', 404);
@@ -185,7 +185,7 @@ class PvpController extends Controller {
                 json_encode($result['battle_log'])
             );
             
-            $battleStateManager->delete($userId);
+            $this->battleStateManager->delete($userId);
             
             $stats = $this->pvpService->getUserStats($userId);
             
@@ -199,7 +199,7 @@ class PvpController extends Controller {
         }
         
         $aiResult = $battleEngine->executeAITurn();
-        $battleStateManager->save($userId, $aiResult);
+        $this->battleStateManager->save($userId, $aiResult);
         
         if ($aiResult['battle_ended']) {
             $duration = time() - ($battleState['start_time'] ?? time());
@@ -213,7 +213,7 @@ class PvpController extends Controller {
                 json_encode($aiResult['battle_log'])
             );
             
-            $battleStateManager->delete($userId);
+            $this->battleStateManager->delete($userId);
             
             $stats = $this->pvpService->getUserStats($userId);
             
@@ -226,7 +226,7 @@ class PvpController extends Controller {
             ]);
         }
         
-        $battleStateManager->save($userId, $result);
+        $this->battleStateManager->save($userId, $result);
         
         $this->jsonSuccess([
             'battle_ended' => false,

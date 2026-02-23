@@ -9,15 +9,20 @@ use App\Models\Achievement;
 use App\Models\UserAchievement;
 
 class AchievementController extends Controller {
+    private Achievement $achievementModel;
+    private UserAchievement $userAchievementModel;
+    
+    public function __construct() {
+        $this->achievementModel = new Achievement();
+        $this->userAchievementModel = new UserAchievement();
+    }
+    
     public function index(): void {
         $userId = Session::userId();
         
-        $achievementModel = new Achievement();
-        $userAchievementModel = new UserAchievement();
-        
-        $achievements = $achievementModel->getUserAchievements($userId);
-        $completedCount = $achievementModel->getCompletedCount($userId);
-        $totalPoints = $achievementModel->getTotalPoints($userId);
+        $achievements = $this->achievementModel->getUserAchievements($userId);
+        $completedCount = $this->achievementModel->getCompletedCount($userId);
+        $totalPoints = $this->achievementModel->getTotalPoints($userId);
         
         $byCategory = [];
         foreach ($achievements as $a) {
@@ -41,9 +46,7 @@ class AchievementController extends Controller {
             return;
         }
         
-        $userAchievementModel = new UserAchievement();
-        
-        if ($userAchievementModel->claimReward($userId, $achievementId)) {
+        if ($this->userAchievementModel->claimReward($userId, $achievementId)) {
             $this->jsonSuccess(['message' => 'Reward claimed!']);
         } else {
             $this->jsonError('Cannot claim reward', 400);

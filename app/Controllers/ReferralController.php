@@ -6,22 +6,27 @@ namespace App\Controllers;
 use Core\Controller;
 use Core\Session;
 use App\Models\Referral;
-use App\Models\User;
 use App\Models\Resource;
 
 class ReferralController extends Controller {
+    private Referral $referralModel;
+    private Resource $resourceModel;
+    
+    public function __construct() {
+        $this->referralModel = new Referral();
+        $this->resourceModel = new Resource();
+    }
+    
     public function index(): void {
         $userId = Session::userId();
         
-        $referralModel = new Referral();
-        
-        $code = $referralModel->getReferralCode($userId);
+        $code = $this->referralModel->getReferralCode($userId);
         if (!$code) {
-            $code = $referralModel->createReferralCode($userId);
+            $code = $this->referralModel->createReferralCode($userId);
         }
         
-        $referrals = $referralModel->getReferrals($userId);
-        $referralCount = $referralModel->getReferralCount($userId);
+        $referrals = $this->referralModel->getReferrals($userId);
+        $referralCount = $this->referralModel->getReferralCount($userId);
         
         $this->view('game/referrals', [
             'code' => $code,
@@ -45,12 +50,9 @@ class ReferralController extends Controller {
             return;
         }
         
-        $referralModel = new Referral();
-        
-        if ($referralModel->useReferralCode($code, $userId)) {
-            $resourceModel = new Resource();
-            $resourceModel->addGold($userId, 500);
-            $resourceModel->addGems($userId, 10);
+        if ($this->referralModel->useReferralCode($code, $userId)) {
+            $this->resourceModel->addGold($userId, 500);
+            $this->resourceModel->addGems($userId, 10);
             
             $this->jsonSuccess(['message' => 'Referral code applied! You received 500 gold and 10 gems!']);
         } else {
@@ -68,11 +70,7 @@ class ReferralController extends Controller {
         
         $referralId = (int)$id;
         
-        $referralModel = new Referral();
-        $stmt = $this->db ?? \Core\Database::getInstance()->getConnection();
-        $stmt = $stmt->prepare("SELECT * FROM referrals WHERE id = ? AND referrer_id = ?");
-        $stmt->execute([$referralId, $userId]);
-        $referral = $stmt->fetch();
+        $referral = $this->referralModel->findByIdAndReferrer($referralId, $userId);
         
         if (!$referral) {
             $this->jsonError('Referral not found', 404);
@@ -86,12 +84,10 @@ class ReferralController extends Controller {
         
         $rewards = $this->getRewardsForStatus($referral['status']);
         
-        $resourceModel = new Resource();
-        $resourceModel->addGold($userId, $rewards['gold']);
-        $resourceModel->addGems($userId, $rewards['gems']);
+        $this->resourceModel->addGold($userId, $rewards['gold']);
+        $this->resourceModel->addGems($userId, $rewards['gems']);
         
-        $stmt = $stmt->prepare("UPDATE referrals SET referrer_reward_claimed = TRUE WHERE id = ?");
-        $stmt->execute([$referralId]);
+        $this->referralModel->markRewardClaimed($referralId);
         
         $this->jsonSuccess(['message' => 'Reward claimed!', 'rewards' => $rewards]);
     }

@@ -30,7 +30,7 @@ class Equipment extends Model {
             'mythic' => 1
         ];
         
-        $rand = rand(1, 100);
+        $rand = random_int(1, 100);
         $cumulative = 0;
         $selectedTier = 'common';
         

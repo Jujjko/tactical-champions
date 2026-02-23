@@ -9,15 +9,21 @@ use App\Models\Friend;
 use App\Models\User;
 
 class FriendController extends Controller {
+    private Friend $friendModel;
+    private User $userModel;
+    
+    public function __construct() {
+        $this->friendModel = new Friend();
+        $this->userModel = new User();
+    }
+    
     public function index(): void {
         $userId = Session::userId();
         
-        $friendModel = new Friend();
-        
-        $friends = $friendModel->getFriends($userId);
-        $pendingRequests = $friendModel->getPendingRequests($userId);
-        $sentRequests = $friendModel->getSentRequests($userId);
-        $friendCount = $friendModel->getFriendCount($userId);
+        $friends = $this->friendModel->getFriends($userId);
+        $pendingRequests = $this->friendModel->getPendingRequests($userId);
+        $sentRequests = $this->friendModel->getSentRequests($userId);
+        $friendCount = $this->friendModel->getFriendCount($userId);
         
         $this->view('game/friends', [
             'friends' => $friends,
@@ -36,16 +42,7 @@ class FriendController extends Controller {
             return;
         }
         
-        $userModel = new User();
-        $stmt = $this->db ?? \Core\Database::getInstance()->getConnection();
-        $stmt = $stmt->prepare("
-            SELECT id, username, level 
-            FROM users 
-            WHERE username LIKE ? AND id != ? AND deleted_at IS NULL 
-            LIMIT 20
-        ");
-        $stmt->execute(["%$query%", $userId]);
-        $users = $stmt->fetchAll();
+        $users = $this->userModel->searchByName($query, $userId, 20);
         
         $this->jsonSuccess(['users' => $users]);
     }
@@ -65,9 +62,7 @@ class FriendController extends Controller {
             return;
         }
         
-        $friendModel = new Friend();
-        
-        if ($friendModel->sendRequest($userId, $friendId)) {
+        if ($this->friendModel->sendRequest($userId, $friendId)) {
             $this->jsonSuccess(['message' => 'Friend request sent!']);
         } else {
             $this->jsonError('Could not send friend request', 400);
@@ -83,9 +78,7 @@ class FriendController extends Controller {
             return;
         }
         
-        $friendModel = new Friend();
-        
-        if ($friendModel->acceptRequest($userId, $friendId)) {
+        if ($this->friendModel->acceptRequest($userId, $friendId)) {
             $this->jsonSuccess(['message' => 'Friend request accepted!']);
         } else {
             $this->jsonError('Could not accept request', 400);
@@ -101,9 +94,7 @@ class FriendController extends Controller {
             return;
         }
         
-        $friendModel = new Friend();
-        
-        if ($friendModel->declineRequest($userId, $friendId)) {
+        if ($this->friendModel->declineRequest($userId, $friendId)) {
             $this->jsonSuccess(['message' => 'Friend request declined']);
         } else {
             $this->jsonError('Could not decline request', 400);
@@ -119,9 +110,7 @@ class FriendController extends Controller {
             return;
         }
         
-        $friendModel = new Friend();
-        
-        if ($friendModel->removeFriend($userId, $friendId)) {
+        if ($this->friendModel->removeFriend($userId, $friendId)) {
             $this->jsonSuccess(['message' => 'Friend removed']);
         } else {
             $this->jsonError('Could not remove friend', 400);

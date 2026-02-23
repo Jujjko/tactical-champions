@@ -8,6 +8,8 @@ use App\Models\PvpRating;
 use App\Models\PvpRewardsLog;
 use App\Models\UserChampion;
 use App\Models\Resource;
+use App\Models\ChampionShard;
+use App\Models\Champion;
 use Core\Database;
 use Core\Session;
 
@@ -19,6 +21,8 @@ class PvpService {
     private PvpRewardsLog $rewardsLog;
     private SeasonService $seasonService;
     private ?AchievementService $achievementService = null;
+    private ChampionShard $shardModel;
+    private Champion $championBaseModel;
     
     private const MIN_RATING_GAIN = 10;
     private const MAX_RATING_GAIN = 35;
@@ -31,6 +35,8 @@ class PvpService {
     private const VICTORY_GEMS_MAX = 28;
     private const VICTORY_SHARD_CHANCE = 35;
     private const VICTORY_ITEM_CHANCE = 12;
+    private const VICTORY_SHARD_MIN = 15;
+    private const VICTORY_SHARD_MAX = 35;
     
     private const DEFEAT_GOLD_MIN = 80;
     private const DEFEAT_GOLD_MAX = 160;
@@ -45,6 +51,8 @@ class PvpService {
         $this->rewardsLog = new PvpRewardsLog();
         $this->seasonService = new SeasonService();
         $this->achievementService = new AchievementService();
+        $this->shardModel = new ChampionShard();
+        $this->championBaseModel = new Champion();
     }
     
     public function startPvpBattle(int $attackerId, int $defenderId, int $attackerChampionId, int $defenderChampionId): array {
@@ -146,16 +154,26 @@ class PvpService {
         $gold = 0;
         $gems = 0;
         $shard = false;
+        $shardData = null;
         $item = null;
         
         if ($result === 'victory') {
-            $gold = rand(self::VICTORY_GOLD_MIN, self::VICTORY_GOLD_MAX);
-            $gems = rand(self::VICTORY_GEMS_MIN, self::VICTORY_GEMS_MAX);
-            $shard = rand(1, 100) <= self::VICTORY_SHARD_CHANCE;
-            $item = rand(1, 100) <= self::VICTORY_ITEM_CHANCE ? 'rare_chest' : null;
+            $gold = random_int(self::VICTORY_GOLD_MIN, self::VICTORY_GOLD_MAX);
+            $gems = random_int(self::VICTORY_GEMS_MIN, self::VICTORY_GEMS_MAX);
+            $shard = random_int(1, 100) <= self::VICTORY_SHARD_CHANCE;
+            $item = random_int(1, 100) <= self::VICTORY_ITEM_CHANCE ? 'rare_chest' : null;
+            
+            if ($shard) {
+                $champion = $this->championBaseModel->getRandomByRarity();
+                if ($champion) {
+                    $shardAmount = random_int(self::VICTORY_SHARD_MIN, self::VICTORY_SHARD_MAX);
+                    $this->shardModel->addShards($userId, $champion['id'], $shardAmount);
+                    $shardData = ['champion_id' => $champion['id'], 'name' => $champion['name'], 'amount' => $shardAmount];
+                }
+            }
         } else {
-            $gold = rand(self::DEFEAT_GOLD_MIN, self::DEFEAT_GOLD_MAX);
-            $gems = rand(self::DEFEAT_GEMS_MIN, self::DEFEAT_GEMS_MAX);
+            $gold = random_int(self::DEFEAT_GOLD_MIN, self::DEFEAT_GOLD_MAX);
+            $gems = random_int(self::DEFEAT_GEMS_MIN, self::DEFEAT_GEMS_MAX);
         }
         
         $this->rewardsLog->create([
@@ -171,10 +189,6 @@ class PvpService {
         $resourceModel->addGold($userId, $gold);
         $resourceModel->addGems($userId, $gems);
         
-        if ($shard) {
-            $resourceModel->addLootbox($userId, 'silver');
-        }
-        
         if ($item) {
             $resourceModel->addLootbox($userId, 'gold');
         }
@@ -183,6 +197,7 @@ class PvpService {
             'gold' => $gold,
             'gems' => $gems,
             'shard' => $shard,
+            'shard_data' => $shardData,
             'item' => $item,
         ];
     }

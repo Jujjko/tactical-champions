@@ -6,10 +6,12 @@ namespace App\Controllers;
 use Core\Controller;
 use Core\Session;
 use App\Models\Tutorial;
-use App\Models\UserChampion;
+use App\Models\Resource;
 
-class TutorialController extends Controller
-{
+class TutorialController extends Controller {
+    private Tutorial $tutorialModel;
+    private Resource $resourceModel;
+    
     private const TUTORIAL_STEPS = [
         'welcome' => [
             'title' => 'Welcome to Tactical Champions!',
@@ -43,15 +45,18 @@ class TutorialController extends Controller
         ],
     ];
 
-    public function index(): void
-    {
+    public function __construct() {
+        $this->tutorialModel = new Tutorial();
+        $this->resourceModel = new Resource();
+    }
+
+    public function index(): void {
         $userId = Session::userId();
-        $tutorialModel = new Tutorial();
         
-        $progress = $tutorialModel->getProgress($userId);
-        $currentStep = $tutorialModel->getNextStep($userId);
-        $completionPercent = $tutorialModel->getCompletionPercent($userId);
-        $hasCompletedAll = $tutorialModel->hasCompletedAll($userId);
+        $progress = $this->tutorialModel->getProgress($userId);
+        $currentStep = $this->tutorialModel->getNextStep($userId);
+        $completionPercent = $this->tutorialModel->getCompletionPercent($userId);
+        $hasCompletedAll = $this->tutorialModel->hasCompletedAll($userId);
         
         $steps = [];
         foreach (self::TUTORIAL_STEPS as $key => $step) {
@@ -69,8 +74,7 @@ class TutorialController extends Controller
         ]);
     }
 
-    public function complete(string $step): void
-    {
+    public function complete(string $step): void {
         $userId = Session::userId();
         
         if (!$this->validateCsrf()) {
@@ -83,24 +87,21 @@ class TutorialController extends Controller
             return;
         }
         
-        $tutorialModel = new Tutorial();
-        
-        if ($tutorialModel->isCompleted($userId, $step)) {
+        if ($this->tutorialModel->isCompleted($userId, $step)) {
             $this->jsonSuccess(['message' => 'Already completed']);
             return;
         }
         
-        $tutorialModel->completeStep($userId, $step);
+        $this->tutorialModel->completeStep($userId, $step);
         
         $reward = self::TUTORIAL_STEPS[$step]['reward_gold'] ?? 0;
         if ($reward > 0) {
-            $resourceModel = new \App\Models\Resource();
-            $resourceModel->addGold($userId, $reward);
+            $this->resourceModel->addGold($userId, $reward);
         }
         
-        $nextStep = $tutorialModel->getNextStep($userId);
-        $completionPercent = $tutorialModel->getCompletionPercent($userId);
-        $hasCompletedAll = $tutorialModel->hasCompletedAll($userId);
+        $nextStep = $this->tutorialModel->getNextStep($userId);
+        $completionPercent = $this->tutorialModel->getCompletionPercent($userId);
+        $hasCompletedAll = $this->tutorialModel->hasCompletedAll($userId);
         
         $this->jsonSuccess([
             'message' => 'Step completed!',
@@ -111,8 +112,7 @@ class TutorialController extends Controller
         ]);
     }
 
-    public function skip(): void
-    {
+    public function skip(): void {
         $userId = Session::userId();
         
         if (!$this->validateCsrf()) {
@@ -120,11 +120,9 @@ class TutorialController extends Controller
             return;
         }
         
-        $tutorialModel = new Tutorial();
-        
         foreach (array_keys(self::TUTORIAL_STEPS) as $step) {
-            if (!$tutorialModel->isCompleted($userId, $step)) {
-                $tutorialModel->completeStep($userId, $step);
+            if (!$this->tutorialModel->isCompleted($userId, $step)) {
+                $this->tutorialModel->completeStep($userId, $step);
             }
         }
         
@@ -134,14 +132,12 @@ class TutorialController extends Controller
         ]);
     }
 
-    public function status(): void
-    {
+    public function status(): void {
         $userId = Session::userId();
-        $tutorialModel = new Tutorial();
         
-        $nextStep = $tutorialModel->getNextStep($userId);
-        $completionPercent = $tutorialModel->getCompletionPercent($userId);
-        $hasCompletedAll = $tutorialModel->hasCompletedAll($userId);
+        $nextStep = $this->tutorialModel->getNextStep($userId);
+        $completionPercent = $this->tutorialModel->getCompletionPercent($userId);
+        $hasCompletedAll = $this->tutorialModel->hasCompletedAll($userId);
         
         $this->jsonSuccess([
             'next_step' => $nextStep,
