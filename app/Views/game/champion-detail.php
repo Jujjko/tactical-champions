@@ -647,7 +647,83 @@ $colors = $rarityColors[$rarity] ?? $rarityColors['common'];
     </div>
 </div>
 
+<!-- Custom Modal -->
+<div id="custom-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeModal()"></div>
+    <div class="relative glass rounded-3xl max-w-md w-full p-8 transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
+        <div class="text-center mb-6">
+            <div id="modal-icon" class="text-6xl mb-4"></div>
+            <h3 id="modal-title" class="text-2xl font-bold text-white mb-2"></h3>
+            <p id="modal-message" class="text-white/70"></p>
+        </div>
+        
+        <div id="modal-details" class="mb-6 text-sm"></div>
+        
+        <div class="flex gap-3">
+            <button onclick="closeModal()" class="flex-1 py-3 px-6 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 transition font-medium">
+                Cancel
+            </button>
+            <button id="modal-confirm-btn" class="flex-1 py-3 px-6 rounded-xl font-bold text-white transition transform hover:scale-105">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+#custom-modal.show {
+    display: flex;
+}
+#custom-modal.show #modal-content {
+    transform: scale(1);
+    opacity: 1;
+}
+</style>
+
 <script>
+let modalCallback = null;
+
+function showModal(config) {
+    const modal = document.getElementById('custom-modal');
+    const content = document.getElementById('modal-content');
+    const icon = document.getElementById('modal-icon');
+    const title = document.getElementById('modal-title');
+    const message = document.getElementById('modal-message');
+    const details = document.getElementById('modal-details');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    
+    icon.textContent = config.icon || '⚠️';
+    title.textContent = config.title || 'Confirm Action';
+    message.textContent = config.message || '';
+    details.innerHTML = config.details || '';
+    
+    confirmBtn.className = 'flex-1 py-3 px-6 rounded-xl font-bold text-white transition transform hover:scale-105 ' + (config.buttonClass || 'bg-gradient-to-r from-emerald-500 to-teal-500');
+    confirmBtn.textContent = config.buttonText || 'Confirm';
+    
+    modalCallback = config.onConfirm;
+    
+    modal.classList.add('show');
+    setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
+}
+
+function closeModal() {
+    const modal = document.getElementById('custom-modal');
+    const content = document.getElementById('modal-content');
+    
+    content.classList.add('scale-95', 'opacity-0');
+    setTimeout(() => {
+        modal.classList.remove('show');
+        modalCallback = null;
+    }, 200);
+}
+
+document.getElementById('modal-confirm-btn').addEventListener('click', function() {
+    if (modalCallback) {
+        modalCallback();
+    }
+    closeModal();
+});
+
 function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -657,8 +733,33 @@ function switchTab(tabName) {
 }
 
 function ascendChampion(userChampionId) {
-    if (!confirm('Ascend this champion to the next star level?')) return;
-    
+    showModal({
+        icon: '⭐',
+        title: 'Ascend Champion',
+        message: 'Ready to power up your champion?',
+        details: `
+            <div class="glass rounded-xl p-4 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-white/60">Current Stars</span>
+                    <span class="font-bold"><?= $champion['stars'] ?>★</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/60">New Stars</span>
+                    <span class="font-bold text-emerald-400"><?= $champion['stars'] + 1 ?>★</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/60">Shards Used</span>
+                    <span class="font-bold text-purple-400"><?= $ascensionInfo['required_shards'] ?></span>
+                </div>
+            </div>
+        `,
+        buttonText: 'Ascend ⭐',
+        buttonClass: 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600',
+        onConfirm: () => executeAscend(userChampionId)
+    });
+}
+
+function executeAscend(userChampionId) {
     fetch(`/champions/${userChampionId}/ascend`, {
         method: 'POST',
         headers: {
@@ -679,8 +780,37 @@ function ascendChampion(userChampionId) {
 }
 
 function tierUpChampion(userChampionId) {
-    if (!confirm('Tier up this champion? This will reset stars to 1 but increase the tier multiplier!')) return;
-    
+    showModal({
+        icon: '🔥',
+        title: 'Tier Up Champion',
+        message: 'Increase your champion\'s tier power!',
+        details: `
+            <div class="glass rounded-xl p-4 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-white/60">Current Tier</span>
+                    <span class="font-bold capitalize"><?= $ascensionInfo['star_tier'] ?? 'white' ?></span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/60">New Tier</span>
+                    <span class="font-bold text-amber-400 capitalize"><?= $ascensionInfo['next_tier'] ?? 'blue' ?></span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/60">Stars Reset</span>
+                    <span class="font-bold">5★ → 1★</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/60">Multiplier</span>
+                    <span class="font-bold text-emerald-400"><?= \App\Services\AscensionService::TIER_MULTIPLIERS[$ascensionInfo['star_tier'] ?? 'white'] ?>x → <?= \App\Services\AscensionService::TIER_MULTIPLIERS[$ascensionInfo['next_tier'] ?? 'blue'] ?>x</span>
+                </div>
+            </div>
+        `,
+        buttonText: 'Tier Up 🔥',
+        buttonClass: 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600',
+        onConfirm: () => executeTierUp(userChampionId)
+    });
+}
+
+function executeTierUp(userChampionId) {
     fetch(`/champions/${userChampionId}/tier-up`, {
         method: 'POST',
         headers: {
@@ -701,8 +831,34 @@ function tierUpChampion(userChampionId) {
 }
 
 function convertDuplicate(userChampionId) {
-    if (!confirm('Convert this duplicate champion to shards?')) return;
+    const shardRange = '<?= match($rarity) { "mythic" => "80-120", "legendary" => "50-80", "epic" => "35-55", "rare" => "25-40", default => "15-30" } ?>';
     
+    showModal({
+        icon: '🔄',
+        title: 'Convert Duplicate',
+        message: 'Transform your duplicate into valuable shards!',
+        details: `
+            <div class="glass rounded-xl p-4 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-white/60">Duplicates</span>
+                    <span class="font-bold"><?= $duplicateCount - 1 ?></span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/60">Shards per Duplicate</span>
+                    <span class="font-bold text-purple-400">${shardRange}</span>
+                </div>
+                <div class="text-xs text-white/40 mt-2 text-center">
+                    One duplicate will be converted
+                </div>
+            </div>
+        `,
+        buttonText: 'Convert to Shards 💠',
+        buttonClass: 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600',
+        onConfirm: () => executeConvert(userChampionId)
+    });
+}
+
+function executeConvert(userChampionId) {
     fetch(`/champions/${userChampionId}/convert-duplicate`, {
         method: 'POST',
         headers: {
