@@ -32,7 +32,7 @@ class AscensionService {
         ]
     ];
     
-    private const TIER_MULTIPLIERS = [
+    public const TIER_MULTIPLIERS = [
         'white' => 1.0,
         'blue' => 1.5,
         'red' => 2.2,
