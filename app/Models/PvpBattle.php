@@ -46,10 +46,21 @@ class PvpBattle extends Model
         return $stmt->fetchAll();
     }
     
-    public function count(): int
+    public function count(array $conditions = []): int
     {
-        $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM {$this->table}");
-        $stmt->execute();
+        if (empty($conditions)) {
+            $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM {$this->table}");
+            $stmt->execute();
+        } else {
+            $where = [];
+            $params = [];
+            foreach ($conditions as $key => $value) {
+                $where[] = "$key = ?";
+                $params[] = $value;
+            }
+            $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM {$this->table} WHERE " . implode(' AND ', $where));
+            $stmt->execute($params);
+        }
         return (int)$stmt->fetch()['count'];
     }
     

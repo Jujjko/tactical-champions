@@ -111,7 +111,7 @@ class Logger
         );
     }
     
-    public function getLogs(string $date = null, int $lines = 100): array
+    public function getLogs(?string $date = null, int $lines = 100): array
     {
         $filename = $this->logPath . '/' . ($date ?? date('Y-m-d')) . '.log';
         
