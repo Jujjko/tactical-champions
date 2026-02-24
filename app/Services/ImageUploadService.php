@@ -10,6 +10,16 @@ class ImageUploadService {
     private int $maxWidth = 500;
     private int $maxHeight = 500;
     
+    private array $uploadErrors = [
+        UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize directive (' . ini_get('upload_max_filesize') . ')',
+        UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE directive in HTML form',
+        UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+        UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+        UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
+        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+        UPLOAD_ERR_EXTENSION => 'File upload stopped by extension',
+    ];
+    
     public function __construct() {
         $this->uploadDir = BASE_PATH . '/public/images/champions/';
         
@@ -18,44 +28,51 @@ class ImageUploadService {
         }
     }
     
-    public function upload(array $file, string $namePrefix = 'champion'): ?string {
-        if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
-            error_log("ImageUpload: No tmp_name or not uploaded file");
-            return null;
+    public function upload(array $file, string $namePrefix = 'champion'): array {
+        if (!isset($file['tmp_name']) || empty($file['tmp_name'])) {
+            return ['success' => false, 'error' => 'No file uploaded'];
         }
         
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            error_log("ImageUpload: Upload error code " . $file['error']);
-            return null;
+            $errorMsg = $this->uploadErrors[$file['error']] ?? 'Unknown upload error';
+            error_log("ImageUpload: Upload error code " . $file['error'] . " - " . $errorMsg);
+            return ['success' => false, 'error' => $errorMsg];
         }
         
-        if (!in_array($file['type'], $this->allowedTypes)) {
-            error_log("ImageUpload: Invalid type " . $file['type']);
-            return null;
+        if (!is_uploaded_file($file['tmp_name'])) {
+            return ['success' => false, 'error' => 'Security: File not uploaded via HTTP POST'];
+        }
+        
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+        
+        if (!in_array($mimeType, $this->allowedTypes)) {
+            return ['success' => false, 'error' => 'Invalid file type: ' . $mimeType . '. Allowed: JPEG, PNG, WebP, GIF'];
         }
         
         if ($file['size'] > $this->maxFileSize) {
-            error_log("ImageUpload: File too large " . $file['size']);
-            return null;
+            $maxMB = round($this->maxFileSize / 1048576, 1);
+            return ['success' => false, 'error' => "File too large: " . round($file['size'] / 1048576, 1) . "MB. Max: {$maxMB}MB"];
         }
         
         $filename = $this->generateFilename($namePrefix, 'webp');
         $filepath = $this->uploadDir . $filename;
         
-        if ($this->resizeAndConvert($file['tmp_name'], $filepath)) {
+        $result = $this->resizeAndConvert($file['tmp_name'], $filepath);
+        
+        if ($result['success']) {
             error_log("ImageUpload: Success - " . $filename);
-            return '/images/champions/' . $filename;
+            return ['success' => true, 'url' => '/images/champions/' . $filename];
         }
         
-        error_log("ImageUpload: Failed to process image");
-        return null;
+        return ['success' => false, 'error' => $result['error'] ?? 'Failed to process image'];
     }
     
-    private function resizeAndConvert(string $source, string $destination): bool {
-        $imageInfo = getimagesize($source);
+    private function resizeAndConvert(string $source, string $destination): array {
+        $imageInfo = @getimagesize($source);
         if (!$imageInfo) {
-            error_log("ImageUpload: Cannot get image size");
-            return false;
+            return ['success' => false, 'error' => 'Cannot read image file'];
         }
         
         $origWidth = $imageInfo[0];
@@ -71,8 +88,7 @@ class ImageUploadService {
         };
         
         if (!$srcImage) {
-            error_log("ImageUpload: Cannot create image from source");
-            return false;
+            return ['success' => false, 'error' => 'Cannot create image from source'];
         }
         
         $ratio = min($this->maxWidth / $origWidth, $this->maxHeight / $origHeight, 1.0);
@@ -93,12 +109,11 @@ class ImageUploadService {
         imagedestroy($dstImage);
         
         if (!$result) {
-            error_log("ImageUpload: Failed to save WebP");
-            return false;
+            return ['success' => false, 'error' => 'Failed to save WebP'];
         }
         
         error_log("ImageUpload: Resized from {$origWidth}x{$origHeight} to {$newWidth}x{$newHeight}");
-        return true;
+        return ['success' => true];
     }
     
     public function delete(?string $url): bool {
@@ -117,5 +132,13 @@ class ImageUploadService {
     
     private function generateFilename(string $prefix, string $extension): string {
         return $prefix . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+    }
+    
+    public function getMaxFileSize(): int {
+        return $this->maxFileSize;
+    }
+    
+    public function getAllowedTypes(): array {
+        return $this->allowedTypes;
     }
 }

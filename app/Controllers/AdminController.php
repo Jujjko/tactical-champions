@@ -161,11 +161,14 @@ class AdminController extends Controller {
         }
         
         $imageUrl = htmlspecialchars($_POST['image_url'] ?? '');
+        $imageError = null;
         
         if (!empty($_FILES['image_file']['name'])) {
-            $uploadedUrl = $this->imageUploadService->upload($_FILES['image_file'], 'champion');
-            if ($uploadedUrl) {
-                $imageUrl = $uploadedUrl;
+            $uploadResult = $this->imageUploadService->upload($_FILES['image_file'], 'champion');
+            if ($uploadResult['success']) {
+                $imageUrl = $uploadResult['url'];
+            } else {
+                $imageError = $uploadResult['error'];
             }
         }
         
@@ -186,7 +189,12 @@ class AdminController extends Controller {
         
         $this->auditService->logCreate('champion', $championId, $data);
         
-        $this->jsonSuccess(['champion_id' => $championId, 'message' => 'Champion created successfully']);
+        $response = ['champion_id' => $championId, 'message' => 'Champion created successfully', 'image_url' => $imageUrl];
+        if ($imageError) {
+            $response['image_warning'] = $imageError;
+        }
+        
+        $this->jsonSuccess($response);
     }
     
     public function updateChampion(string $id): void {
@@ -211,20 +219,22 @@ class AdminController extends Controller {
         error_log("POST: " . json_encode($_POST));
         
         $imageUrl = $oldChampion['image_url'] ?? '';
+        $imageError = null;
         
         if (!empty($_POST['image_url'])) {
             $imageUrl = $_POST['image_url'];
         }
         
         if (!empty($_FILES['image_file']['name'])) {
-            $uploadedUrl = $this->imageUploadService->upload($_FILES['image_file'], 'champion');
-            if ($uploadedUrl) {
+            $uploadResult = $this->imageUploadService->upload($_FILES['image_file'], 'champion');
+            if ($uploadResult['success']) {
                 if (!empty($oldChampion['image_url']) && str_starts_with($oldChampion['image_url'], '/images/')) {
                     $this->imageUploadService->delete($oldChampion['image_url']);
                 }
-                $imageUrl = $uploadedUrl;
+                $imageUrl = $uploadResult['url'];
             } else {
-                error_log("Image upload failed for champion {$id}");
+                $imageError = $uploadResult['error'];
+                error_log("Image upload failed for champion {$id}: {$imageError}");
             }
         }
         
@@ -244,7 +254,12 @@ class AdminController extends Controller {
         $this->championModel->update((int)$id, $data);
         $this->auditService->logUpdate('champion', (int)$id, $oldChampion, $data);
         
-        $this->jsonSuccess(['champion_id' => (int)$id, 'image_url' => $imageUrl]);
+        $response = ['champion_id' => (int)$id, 'image_url' => $imageUrl];
+        if ($imageError) {
+            $response['image_warning'] = $imageError;
+        }
+        
+        $this->jsonSuccess($response);
     }
     
     public function deleteChampion(string $id): void {
