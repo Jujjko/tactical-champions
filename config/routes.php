@@ -21,10 +21,9 @@ $router->get('/champions/shards', 'ChampionController', 'shards', [AuthMiddlewar
 $router->get('/champions/{id}', 'ChampionController', 'show', [AuthMiddleware::class]);
 $router->get('/champions/{id}/upgrade', 'ChampionController', 'upgrade', [AuthMiddleware::class]);
 $router->post('/champions/{id}/upgrade', 'ChampionController', 'doUpgrade', [AuthMiddleware::class]);
-$router->get('/champions/{id}/fusion', 'ChampionController', 'fusion', [AuthMiddleware::class]);
-$router->post('/champions/fusion', 'ChampionController', 'doFusion', [AuthMiddleware::class]);
 $router->post('/champions/{id}/ascend', 'ChampionController', 'ascend', [AuthMiddleware::class]);
 $router->post('/champions/{id}/tier-up', 'ChampionController', 'tierUp', [AuthMiddleware::class]);
+$router->post('/champions/{id}/convert-duplicate', 'ChampionController', 'convertDuplicate', [AuthMiddleware::class]);
 $router->get('/battle-history', 'ChampionController', 'history', [AuthMiddleware::class]);
 $router->get('/missions', 'MissionController', 'index', [AuthMiddleware::class]);
 $router->get('/lootbox', 'LootboxController', 'index', [AuthMiddleware::class]);

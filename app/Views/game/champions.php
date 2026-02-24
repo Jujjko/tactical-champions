@@ -53,13 +53,6 @@
                     <i data-lucide="chevron-down" class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none"></i>
                 </div>
                 
-                <!-- Fusion Ready Filter -->
-                <label class="flex items-center gap-2 cursor-pointer bg-white/5 border border-white/10 rounded-xl px-4 py-3 hover:bg-white/10 transition">
-                    <input type="checkbox" id="filter-fusion" class="w-4 h-4 accent-yellow-500">
-                    <span class="text-sm">Can Fuse</span>
-                    <span class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
-                </label>
-                
                 <!-- Clear Filters -->
                 <button id="clear-filters" class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/70 hover:text-white transition text-sm hidden">
                     Clear Filters
@@ -83,7 +76,6 @@
         <?php else: ?>
         <div id="champions-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
             <?php foreach ($champions as $index => $champion): 
-                $canFuse = !empty($fusionEligible[$champion['id']]);
                 $tierColors = [
                     'common' => ['from-zinc-600 to-slate-700', 'border-zinc-500/30'],
                     'rare' => ['from-blue-600 to-cyan-700', 'border-blue-500/30'],
@@ -98,7 +90,6 @@
                data-name="<?= htmlspecialchars($champion['name'], ENT_QUOTES, 'UTF-8') ?>"
                data-tier="<?= htmlspecialchars($champion['tier'], ENT_QUOTES, 'UTF-8') ?>"
                data-stars="<?= (int)($champion['stars'] ?? 1) ?>"
-               data-can-fuse="<?= $canFuse ? '1' : '0' ?>"
                style="animation-delay: <?= $index * 60 ?>ms">
 
                 <!-- Tier Background Glow -->
@@ -111,20 +102,6 @@
                        ($champion['tier'] === 'epic' ? 'from-purple-500 via-pink-500 to-violet-500' : 
                        ($champion['tier'] === 'rare' ? 'from-blue-500 to-cyan-500' : 'from-zinc-500 to-slate-500'))) ?> 
                     opacity-30 group-hover:opacity-70 transition-all duration-500 -z-10"></div>
-
-                <!-- Fusion Indicator -->
-                <?php if ($canFuse): ?>
-                <div class="absolute -top-1 -right-1 z-20">
-                    <div class="relative">
-                        <span class="flex h-5 w-5">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-5 w-5 bg-yellow-500 items-center justify-center">
-                                <span class="text-[10px] font-bold text-black">⬆</span>
-                            </span>
-                        </span>
-                    </div>
-                </div>
-                <?php endif; ?>
 
                 <div class="relative glass rounded-3xl overflow-hidden transition-all duration-500 group-hover:-translate-y-4 group-hover:scale-[1.04] border <?= $tierStyle[1] ?>">
                     
@@ -180,20 +157,11 @@
                                 <span class="text-base">🛡️</span>
                                 <span class="font-bold text-amber-400"><?= $champion['defense'] ?></span>
                             </div>
-                            <div class="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1">
+                             <div class="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1">
                                 <span class="text-base">⚡</span>
                                 <span class="font-bold text-sky-400"><?= $champion['speed'] ?></span>
                             </div>
                         </div>
-
-                        <?php if ($canFuse): ?>
-                        <div class="mt-4 text-center">
-                            <span class="inline-flex items-center gap-1.5 text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full border border-yellow-500/30">
-                                <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>
-                                Ready to fuse!
-                            </span>
-                        </div>
-                        <?php endif; ?>
                     </div>
                 </div>
             </a>
@@ -254,7 +222,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterName = document.getElementById('filter-name');
     const filterTier = document.getElementById('filter-tier');
     const filterStars = document.getElementById('filter-stars');
-    const filterFusion = document.getElementById('filter-fusion');
     const clearFilters = document.getElementById('clear-filters');
     const activeFilters = document.getElementById('active-filters');
     const noResults = document.getElementById('no-results');
@@ -265,7 +232,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const name = filterName.value.toLowerCase().trim();
         const tier = filterTier.value;
         const stars = filterStars.value;
-        const canFuse = filterFusion.checked;
         
         let visibleCards = 0;
         let activeTags = [];
@@ -274,14 +240,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const cardName = (card.dataset.name || '').toLowerCase();
             const cardTier = card.dataset.tier || '';
             const cardStars = card.dataset.stars || '1';
-            const cardCanFuse = card.dataset.canFuse === '1';
             
             let show = true;
             
             if (name && !cardName.includes(name)) show = false;
             if (tier && cardTier !== tier) show = false;
             if (stars && cardStars !== stars) show = false;
-            if (canFuse && !cardCanFuse) show = false;
             
             if (show) {
                 card.classList.remove('hidden-by-filter');
@@ -294,15 +258,13 @@ document.addEventListener('DOMContentLoaded', function() {
         visibleCount.textContent = visibleCards;
         noResults.classList.toggle('hidden', visibleCards > 0);
         
-        // Show clear button if any filter is active
-        const hasFilters = name || tier || stars || canFuse;
+        const hasFilters = name || tier || stars;
         clearFilters.classList.toggle('hidden', !hasFilters);
         
-        // Update active filter tags
-        updateActiveTags(name, tier, stars, canFuse);
+        updateActiveTags(name, tier, stars);
     }
     
-    function updateActiveTags(name, tier, stars, canFuse) {
+    function updateActiveTags(name, tier, stars) {
         const tags = [];
         
         const esc = (str) => str.replace(/[<>"'&]/g, (c) => ({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c]));
@@ -326,12 +288,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<button onclick="clearFilter(\'stars\')" class="hover:text-white">×</button>' +
             '</span>');
         }
-        if (canFuse) {
-            tags.push('<span class="inline-flex items-center gap-2 bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-sm">' +
-                'Can Fuse ' +
-                '<button onclick="clearFilter(\'fusion\')" class="hover:text-white">×</button>' +
-            '</span>');
-        }
         
         if (tags.length > 0) {
             activeFilters.innerHTML = tags.join('');
@@ -346,22 +302,18 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'name': filterName.value = ''; break;
             case 'tier': filterTier.value = ''; break;
             case 'stars': filterStars.value = ''; break;
-            case 'fusion': filterFusion.checked = false; break;
         }
         applyFilters();
     };
     
-    // Auto-filter on any change
     filterName.addEventListener('input', applyFilters);
     filterTier.addEventListener('change', applyFilters);
     filterStars.addEventListener('change', applyFilters);
-    filterFusion.addEventListener('change', applyFilters);
     
     clearFilters.addEventListener('click', function() {
         filterName.value = '';
         filterTier.value = '';
         filterStars.value = '';
-        filterFusion.checked = false;
         applyFilters();
     });
 });

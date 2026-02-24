@@ -272,4 +272,64 @@ class AscensionService {
             'chance' => $victory ? 40 : 20
         ];
     }
+    
+    public static function getStarBonus(int $stars): float {
+        $multipliers = [
+            1 => 1.00,
+            2 => 1.15,
+            3 => 1.35,
+            4 => 1.60,
+            5 => 1.90,
+        ];
+        return $multipliers[$stars] ?? 1.0;
+    }
+    
+    public static function getStarsHtml(int $stars): string {
+        $html = '<div class="flex gap-1">';
+        for ($i = 1; $i <= 5; $i++) {
+            if ($i <= $stars) {
+                $html .= '<span class="text-yellow-400 text-xl">⭐</span>';
+            } else {
+                $html .= '<span class="text-white/20 text-xl">☆</span>';
+            }
+        }
+        $html .= '</div>';
+        return $html;
+    }
+    
+    public static function getStarsDisplay(int $stars): string {
+        return str_repeat('⭐', $stars) . str_repeat('☆', 5 - $stars);
+    }
+    
+    public function convertDuplicateToShards(int $userId, int $userChampionId): array {
+        $userChamp = $this->userChampionModel->getChampionWithDetails($userChampionId, $userId);
+        
+        if (!$userChamp) {
+            return ['success' => false, 'error' => 'Champion not found'];
+        }
+        
+        $champions = $this->userChampionModel->getChampionsByType($userId, $userChamp['champion_id']);
+        
+        if (count($champions) <= 1) {
+            return ['success' => false, 'error' => 'No duplicates to convert'];
+        }
+        
+        $shardAmount = match($userChamp['tier']) {
+            'mythic' => random_int(80, 120),
+            'legendary' => random_int(50, 80),
+            'epic' => random_int(35, 55),
+            'rare' => random_int(25, 40),
+            default => random_int(15, 30),
+        };
+        
+        $this->shardModel->addShards($userId, $userChamp['champion_id'], $shardAmount);
+        
+        $this->userChampionModel->softDelete($userChampionId);
+        
+        return [
+            'success' => true,
+            'shards_received' => $shardAmount,
+            'message' => "Converted duplicate to {$shardAmount} shards!"
+        ];
+    }
 }
