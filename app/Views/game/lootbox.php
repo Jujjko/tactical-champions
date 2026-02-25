@@ -1,18 +1,38 @@
 <?php ob_start(); ?>
-<div class="min-h-screen bg-[#0a0818] py-12 pt-24">
-    <div class="max-w-5xl mx-auto px-6">
+<style>
+.lootbox-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lootbox-card:hover:not(.disabled) {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 25px 50px -10px rgba(0,0,0,0.4);
+}
+.lootbox-card.disabled {
+    opacity: 0.5;
+}
+</style>
+
+<div class="min-h-screen bg-gradient-to-br from-[#0b0f1a] via-[#0d1220] to-[#121a2b] py-12 pt-24 relative">
+    <!-- Ambient Glow -->
+    <div class="fixed inset-0 pointer-events-none">
+        <div class="absolute top-20 left-1/4 w-[600px] h-[600px] bg-amber-500/5 rounded-full blur-[100px]"></div>
+        <div class="absolute bottom-20 right-1/4 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[100px]"></div>
+    </div>
+
+    <div class="max-w-5xl mx-auto px-6 relative z-10">
+        <!-- Header -->
         <div class="text-center mb-10">
-            <div class="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl text-6xl mb-4 neon-glow">📦</div>
+            <div class="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl text-6xl mb-4 neon-glow animate-pulse">📦</div>
             <h1 class="title-font text-5xl font-bold">Lootboxes</h1>
-            <p class="text-white/60 text-xl mt-2"><span id="total-count"><?= $counts['total'] ?></span> boxes waiting to be opened</p>
+            <p class="text-white/50 text-xl mt-2"><span id="total-count"><?= $counts['total'] ?></span> boxes waiting to be opened</p>
         </div>
 
         <?php if ($counts['total'] === 0): ?>
-        <div class="glass rounded-3xl p-12 text-center">
-            <div class="text-6xl mb-4">📦</div>
-            <h3 class="text-xl font-semibold mb-2">No Lootboxes Available</h3>
-            <p class="text-white/60 mb-6">Complete missions with lootbox chances to earn rewards!</p>
-            <a href="/missions" class="inline-block bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-3 px-8 rounded-xl transition">
+        <div class="glass rounded-3xl p-16 text-center">
+            <div class="text-7xl mb-6">📦</div>
+            <h3 class="text-2xl font-bold mb-3">No Lootboxes Available</h3>
+            <p class="text-white/50 text-lg mb-8">Complete missions with lootbox chances to earn rewards!</p>
+            <a href="/missions" class="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-4 px-10 rounded-2xl transition hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20">
                 Start Missions
             </a>
         </div>
@@ -46,7 +66,7 @@
             foreach ($types as $type => $config): 
                 $count = $counts[$type] ?? 0;
             ?>
-            <div class="glass rounded-3xl p-6 border <?= $config['border'] ?> <?= $count === 0 ? 'opacity-40' : '' ?>" data-type="<?= $type ?>">
+            <div class="lootbox-card glass rounded-3xl p-6 border <?= $config['border'] ?> <?= $count === 0 ? 'disabled' : '' ?>" data-type="<?= $type ?>">
                 <div class="flex items-center gap-4 mb-4">
                     <div class="relative w-20 h-20">
                         <div class="absolute inset-0 bg-gradient-to-br <?= $config['gradient'] ?> rounded-xl transform rotate-3 shadow-lg"></div>

@@ -1,24 +1,44 @@
 <?php ob_start(); ?>
-<div class="min-h-screen bg-[#0a0818] py-12 pt-24">
-    <div class="max-w-7xl mx-auto px-6">
-        <div class="flex items-center justify-between mb-10">
+<style>
+.shop-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.shop-item:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3);
+}
+</style>
+
+<div class="min-h-screen bg-gradient-to-br from-[#0b0f1a] via-[#0d1220] to-[#121a2b] py-12 pt-24 relative">
+    <!-- Ambient Glow -->
+    <div class="fixed inset-0 pointer-events-none">
+        <div class="absolute top-0 left-1/3 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[100px]"></div>
+        <div class="absolute bottom-0 right-1/3 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[100px]"></div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
             <div>
-                <h1 class="title-font text-5xl font-bold">🛒 Shop</h1>
-                <p class="text-white/60 text-xl mt-2">Purchase items and resources</p>
+                <h1 class="title-font text-5xl font-bold flex items-center gap-4">
+                    <span class="text-4xl">🛒</span>
+                    <span>Shop</span>
+                </h1>
+                <p class="text-white/50 text-xl mt-2">Purchase items and resources</p>
             </div>
-            <div class="flex gap-4">
-                <div class="glass rounded-2xl px-6 py-3 flex items-center gap-3">
+            <div class="flex gap-3">
+                <div class="glass rounded-2xl px-5 py-3 flex items-center gap-3">
                     <span class="text-2xl">💰</span>
                     <div>
                         <div class="text-xl font-bold text-yellow-400" id="gold-display"><?= number_format($resources['gold']) ?></div>
-                        <div class="text-xs text-white/60">Gold</div>
+                        <div class="text-xs text-white/40">Gold</div>
                     </div>
                 </div>
-                <div class="glass rounded-2xl px-6 py-3 flex items-center gap-3">
+                <div class="glass rounded-2xl px-5 py-3 flex items-center gap-3">
                     <span class="text-2xl">💎</span>
                     <div>
                         <div class="text-xl font-bold text-cyan-400" id="gems-display"><?= number_format($resources['gems']) ?></div>
-                        <div class="text-xs text-white/60">Gems</div>
+                        <div class="text-xs text-white/40">Gems</div>
                     </div>
                 </div>
             </div>

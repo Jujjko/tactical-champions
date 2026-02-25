@@ -613,21 +613,102 @@ $colors = $rarityColors[$rarity] ?? $rarityColors['common'];
         <!-- SKILLS TAB -->
         <?php if (!empty($champion['special_ability'])): ?>
         <div id="tab-skills" class="tab-content hidden">
-            <div class="glass rounded-3xl p-8">
+            <!-- Main Ability -->
+            <div class="glass rounded-3xl p-8 mb-6">
                 <div class="flex items-start gap-6">
-                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-br <?= $colors['gradient'] ?> flex items-center justify-center text-4xl flex-shrink-0">
+                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-br <?= $colors['gradient'] ?> flex items-center justify-center text-4xl flex-shrink-0 relative">
                         ✨
+                        <div class="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-purple-500/30 border border-purple-500/50 flex items-center justify-center text-xs">
+                            1
+                        </div>
                     </div>
                     <div class="flex-1">
                         <div class="flex items-center gap-3 mb-2">
-                            <div class="font-bold text-xl text-white">Special Ability</div>
+                            <div class="font-bold text-xl text-white"><?= htmlspecialchars($champion['name']) ?>'s Ability</div>
                             <span class="px-2 py-1 rounded-full text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
                                 Passive
                             </span>
+                            <span class="px-2 py-1 rounded-full text-xs bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                Always Active
+                            </span>
                         </div>
-                        <p class="text-lg text-white/80 leading-relaxed"><?= htmlspecialchars($champion['special_ability']) ?></p>
+                        <p class="text-lg text-white/80 leading-relaxed mb-4"><?= htmlspecialchars($champion['special_ability']) ?></p>
+                        
+                        <!-- Ability Stats -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="bg-white/5 rounded-xl p-3 text-center">
+                                <div class="text-white/40 text-xs uppercase">Type</div>
+                                <div class="font-semibold text-purple-400">Passive</div>
+                            </div>
+                            <div class="bg-white/5 rounded-xl p-3 text-center">
+                                <div class="text-white/40 text-xs uppercase">Cooldown</div>
+                                <div class="font-semibold">None</div>
+                            </div>
+                            <div class="bg-white/5 rounded-xl p-3 text-center">
+                                <div class="text-white/40 text-xs uppercase">Damage</div>
+                                <div class="font-semibold text-rose-400">-</div>
+                            </div>
+                            <div class="bg-white/5 rounded-xl p-3 text-center">
+                                <div class="text-white/40 text-xs uppercase">Range</div>
+                                <div class="font-semibold">Self</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Champion Info -->
+            <div class="glass rounded-3xl p-8">
+                <div class="text-white/60 text-sm uppercase tracking-widest mb-6">Champion Attributes</div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="bg-white/5 rounded-xl p-4">
+                        <div class="text-white/40 text-xs uppercase mb-1">Role</div>
+                        <div class="font-semibold">
+                            <?php
+                            $role = 'Warrior';
+                            if ($champion['base_attack'] > $champion['base_defense'] * 2) $role = 'DPS';
+                            elseif ($champion['base_defense'] > $champion['base_attack'] * 2) $role = 'Tank';
+                            elseif ($champion['base_speed'] > 70) $role = 'Assassin';
+                            elseif ($champion['base_health'] > 150) $role = 'Bruiser';
+                            echo $role;
+                            ?>
+                        </div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4">
+                        <div class="text-white/40 text-xs uppercase mb-1">Primary Stat</div>
+                        <div class="font-semibold">
+                            <?php
+                            $stats = ['health' => $champion['base_health'], 'attack' => $champion['base_attack'], 'defense' => $champion['base_defense'], 'speed' => $champion['base_speed']];
+                            $primary = array_keys($stats, max($stats))[0];
+                            echo ucfirst($primary);
+                            ?>
+                        </div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4">
+                        <div class="text-white/40 text-xs uppercase mb-1">Scaling</div>
+                        <div class="font-semibold text-emerald-400">+15% per ★</div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4">
+                        <div class="text-white/40 text-xs uppercase mb-1">Max Stars</div>
+                        <div class="font-semibold">5★</div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4">
+                        <div class="text-white/40 text-xs uppercase mb-1">Max Tier</div>
+                        <div class="font-semibold text-yellow-400">Gold</div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4">
+                        <div class="text-white/40 text-xs uppercase mb-1">Max Level</div>
+                        <div class="font-semibold">∞ (20 with ascension)</div>
+                    </div>
+                </div>
+
+                <?php if (!empty($champion['description'])): ?>
+                <div class="mt-6 pt-6 border-t border-white/10">
+                    <div class="text-white/40 text-xs uppercase tracking-widest mb-3">Lore</div>
+                    <p class="text-white/60 leading-relaxed"><?= htmlspecialchars($champion['description']) ?></p>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>
